@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TagerCom")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7a7e9d49eb69fe328fafadaa9feae0b023d38ea3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+17cf9c69677c1200ec3e4428e06e4f865f8cb684")]
 [assembly: System.Reflection.AssemblyProductAttribute("TagerCom")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TagerCom")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
