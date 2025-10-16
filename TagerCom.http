@@ -1,0 +1,6 @@
+@TagerCom_HostAddress = http://localhost:5030
+
+GET {{TagerCom_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
