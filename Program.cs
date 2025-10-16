@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerUI;
 using Swashbuckle.AspNetCore.Swagger;
-
+using Swashbuckle.AspNetCore.SwaggerUI;
+using TagerCom.DataAcess;
+using TagerCom.Utility.DbInitalizer;
+using TagerCom.Utility.DbInitializer;
 namespace TagerCom
 {
     public class Program
@@ -14,10 +18,20 @@ namespace TagerCom
             // Add services to the container.
             builder.Services.AddControllers();
 
-            // ? Optional: Keep OpenAPI (generates JSON)
+            // Optional: Keep OpenAPI (generates JSON)
             builder.Services.AddOpenApi();
 
-            // ? Add Swagger UI support
+            builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase")));
+
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>(option =>
+            {
+                option.Password.RequiredLength = 8;      // Minimum password length
+                option.User.RequireUniqueEmail = true;   // Require unique email per user
+            }).AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+            builder.Services.AddScoped<IDbInitializer, DbInitializer>();
+
+            // Add Swagger UI support
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
             {
@@ -30,8 +44,15 @@ namespace TagerCom
             });
 
             var app = builder.Build();
-
-            // ? Configure the HTTP request pipeline.
+            // --------------------------------------------------------
+            // DbInitializer
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+                dbInitializer.Initialize();
+            }
+            // --------------------------------------------------------
+            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 // This generates openapi.json
