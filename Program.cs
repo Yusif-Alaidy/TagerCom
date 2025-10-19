@@ -58,7 +58,7 @@ namespace TagerCom
                 // This generates openapi.json
                 app.MapOpenApi();
 
-                // ? Enable Swagger UI
+                //  Enable Swagger UI
                 app.UseSwagger();
                 app.UseSwaggerUI(options =>
                 {
