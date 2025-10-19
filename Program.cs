@@ -1,5 +1,12 @@
-
-
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.SwaggerUI;
+using TagerCom.DataAcess;
+using TagerCom.Utility.DbInitalizer;
+using TagerCom.Utility.DbInitializer;
 namespace TagerCom
 {
     public class Program
@@ -9,85 +16,60 @@ namespace TagerCom
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddControllersWithViews();
-            builder.Services.AddSession();
+            builder.Services.AddControllers();
 
+            // Optional: Keep OpenAPI (generates JSON)
+            builder.Services.AddOpenApi();
+
+            builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase")));
+
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>(option =>
+            {
+                option.Password.RequiredLength = 8;      // Minimum password length
+                option.User.RequireUniqueEmail = true;   // Require unique email per user
+            }).AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+            builder.Services.AddScoped<IDbInitializer, DbInitializer>();
+
+            // Add Swagger UI support
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddOpenApi(); // ÷—Ê—Ì ⁄·‘«‰ MapOpenApi Ì‘ €·
-
-
-            builder.Services.AddDbContext<ApplicationDbContext>(option =>
+            builder.Services.AddSwaggerGen(options =>
             {
-                option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "TagerCom API",
+                    Version = "v1",
+                    Description = "API documentation for TagerCom project"
+                });
             });
-
-            builder.Services.AddIdentity<ApplicationUser, IdentityRole>(option =>
-            {
-                option.Password.RequiredLength = 6;
-                option.Password.RequireNonAlphanumeric = false;
-                option.User.RequireUniqueEmail = true;
-                //option.Lockout.
-            })
-                .AddEntityFrameworkStores<ApplicationDbContext>()
-                .AddDefaultTokenProviders();
-
-            builder.Services.AddTransient<IEmailSender, EmailSender>();
-            builder.Services.ConfigureApplicationCookie(options =>
-            {
-                options.LoginPath = "/Identity/Account/Login";
-                options.AccessDeniedPath = "/Customer/Home/NotFoundPage";
-            });
-
-            builder.Services.AddScoped<IRepository<UserOTP>, Repository<UserOTP>>();
-
-            // JWT TOKEN
-
-            builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-          .AddJwtBearer(options =>
-     {
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateAudience = true,
-        ValidateIssuer = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidAudience = builder.Configuration["JWT:audience"],
-        ValidIssuer = builder.Configuration["JWT:issuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:key"] ?? ""))
-
-    };
-       });
-
-            Console.WriteLine("JWT key = '" + builder.Configuration["JWT:key"] + "'");
 
             var app = builder.Build();
-
+            // --------------------------------------------------------
+            // DbInitializer
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+                dbInitializer.Initialize();
+            }
+            // --------------------------------------------------------
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
+                // This generates openapi.json
                 app.MapOpenApi();
-                app.MapScalarApiReference();
+
+                //  Enable Swagger UI
+                app.UseSwagger();
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "TagerCom API v1");
+                    options.RoutePrefix = "swagger"; // open at /swagger
+                });
             }
 
             app.UseHttpsRedirection();
-            app.UseRouting();
-
-            app.UseAuthentication();
             app.UseAuthorization();
-
-            app.UseSession();
-
-           
-
-            app.MapStaticAssets();
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{area=Customer}/{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
+            app.MapControllers();
 
             app.Run();
         }
