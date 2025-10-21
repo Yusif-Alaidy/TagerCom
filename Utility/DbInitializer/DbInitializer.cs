@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using TagerCom.DataAcess;
+using TagerCom.DataAccess;
 using TagerCom.Utility.DbInitalizer;
 
 namespace TagerCom.Utility.DbInitializer
@@ -10,23 +10,23 @@ namespace TagerCom.Utility.DbInitializer
     {
         #region Fields
         public ApplicationDbContext Context { get; }
-        public UserManager<IdentityUser> UserManger { get; }
+        public UserManager<ApplicationUser> UserManger { get; }
         public RoleManager<IdentityRole> RoleManger { get; }
         private readonly ILogger<DbInitializer> _logger;
 
         #endregion
 
         #region Constructore
-        public DbInitializer(ApplicationDbContext Context, UserManager<IdentityUser> UserManger, RoleManager<IdentityRole> RoleManger, ILogger<DbInitializer> logger)
+        public DbInitializer(ApplicationDbContext Context, UserManager<ApplicationUser> UserManger, RoleManager<IdentityRole> RoleManger, ILogger<DbInitializer> logger)
         {
             this.Context =Context;
             this.UserManger = UserManger;
             this.RoleManger = RoleManger;
-            this._logger = _logger;
+            this._logger = logger;
 
         }
         #endregion
-
+        
         #region Initialize
         public void Initialize()
         {
@@ -40,7 +40,7 @@ namespace TagerCom.Utility.DbInitializer
                 // -------------------------------------------------------
 
                 // Seed data for role --------------------------------------------------------
-                if (RoleManger.Roles.IsNullOrEmpty())
+                if (RoleManger.Roles == null)
                 {
 
                     RoleManger.CreateAsync(new("SuperAdmin")).GetAwaiter().GetResult();

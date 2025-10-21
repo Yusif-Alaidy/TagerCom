@@ -1,66 +1,66 @@
-﻿
-
-namespace TagerCom.Area.Identity.Controller
+﻿namespace TagerCom.Area.Identity.Controller
 {
     [Route("api/[area]/[controller]")]
     [Area("Identity")]
     [ApiController]
     public class AccountsControllers : ControllerBase
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IEmailSender _emailSender;
-        private readonly SignInManager<ApplicationUser> _signInManager;
+        #region Fields
+
+        private readonly UserManager<ApplicationUser> userManager;
+        private readonly IEmailSender emailSender;
+        private readonly SignInManager<ApplicationUser> signInManager;
         private readonly IConfiguration configuration;
-        private readonly IRepository<UserOTP> _userOTP;
+        private readonly IRepository<UserOTP> userOTP;
 
-        public AccountsControllers(UserManager<ApplicationUser> userManager,
-            IEmailSender emailSender, SignInManager<ApplicationUser> signInManager,
-            IConfiguration configuration, IRepository<UserOTP> userOTP)
+        #endregion
+
+        #region Constructore
+        public AccountsControllers( UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
         {
-            _signInManager = signInManager;
+            this.signInManager = signInManager;
             this.configuration = configuration;
-            _emailSender = emailSender;
-            _userManager = userManager;
-            _userOTP = userOTP;
+            this.emailSender = emailSender;
+            this.userManager = userManager;
+            this.userOTP = userOTP;
         }
+        #endregion
 
+        #region Register
         // 🔹 Register new user and send confirmation email
-        [HttpPost]
-        [Route("Register")]
+        [HttpPost("Register")]
         public async Task<IActionResult> Register(RegisterDTO registerDTO)
         {
             ApplicationUser applicationuser = new()
             {
-                Name = registerDTO.Name,
                 UserName = registerDTO.UserName,
                 Email = registerDTO.Email,
-                City = registerDTO.City,
-                street = registerDTO.street,
-                PostalCode = registerDTO.PostalCode,
             };
 
-            var result = await _userManager.CreateAsync(applicationuser, registerDTO.Password);
+            var result = await userManager.CreateAsync(applicationuser, registerDTO.Password);
 
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
             // Generate email confirmation link
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(applicationuser);
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(applicationuser);
             var link = Url.Action("ConfirmEmail", "Accounts", new { Area = "Identity", token = token, UserId = applicationuser }, Request.Scheme);
-            await _emailSender.SendEmailAsync(applicationuser.Email, "Confirm Your Email", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
+            await emailSender.SendEmailAsync(applicationuser.Email, "Confirm Your Email", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
 
             return Ok(new { SuccMsg = "User created successfully. Please confirm your email." });
         }
+        #endregion
 
+        #region ConfirmEmail
         //Confirm user email using token
         [HttpPost]
         public async Task<IActionResult> ConfirmEmail(string token, string UserId)
         {
-            var user = await _userManager.FindByIdAsync(UserId);
+            var user = await userManager.FindByIdAsync(UserId);
             if (user == null)
                 return NotFound();
 
-            var result = await _userManager.ConfirmEmailAsync(user, token);
+            var result = await userManager.ConfirmEmailAsync(user, token);
             if (!result.Succeeded)
                 return BadRequest(new { msg = "Link expired, please resend confirmation email." });
 
@@ -69,10 +69,13 @@ namespace TagerCom.Area.Identity.Controller
 
         //Login user and return access + refresh tokens
         [HttpPost("Login")]
+        #endregion
+
+        #region Login
         public async Task<IActionResult> Login(LoginDTO loginDTO)
         {
-            var user = await _userManager.FindByEmailAsync(loginDTO.EmailOrUserName)
-                  ?? await _userManager.FindByNameAsync(loginDTO.EmailOrUserName);
+            var user = await userManager.FindByEmailAsync(loginDTO.EmailOrUserName)
+                  ?? await userManager.FindByNameAsync(loginDTO.EmailOrUserName);
 
             if (user == null)
             {
@@ -84,7 +87,7 @@ namespace TagerCom.Area.Identity.Controller
                 });
             }
 
-            var result = await _signInManager.PasswordSignInAsync(user, loginDTO.Password, loginDTO.RememberME, true);
+            var result = await signInManager.PasswordSignInAsync(user, loginDTO.Password, loginDTO.RememberME, true);
 
             if (!result.Succeeded)
             {
@@ -100,7 +103,7 @@ namespace TagerCom.Area.Identity.Controller
             if (!user.LockoutEnabled)
                 return BadRequest(new { msg = $"You are blocked until {user.LockoutEnd}" });
 
-            var roles = await _userManager.GetRolesAsync(user);
+            var roles = await userManager.GetRolesAsync(user);
 
             var Claims = new List<Claim>() {
                 new Claim(ClaimTypes.NameIdentifier,user.Id),
@@ -130,7 +133,7 @@ namespace TagerCom.Area.Identity.Controller
 
             // Link new refresh token to user
             user.RefreshTokens.Add(refreshToken);
-            await _userManager.UpdateAsync(user);
+            await userManager.UpdateAsync(user);
 
             return Ok(new
             {
@@ -139,7 +142,9 @@ namespace TagerCom.Area.Identity.Controller
                 expiresAt = token.ValidTo
             });
         }
+        #endregion
 
+        #region GenerateRefreshToken
         //Helper method to generate refresh token
         private RefreshToken GenerateRefreshToken(string ipAddress)
         {
@@ -151,13 +156,15 @@ namespace TagerCom.Area.Identity.Controller
                 CreatedByIp = ipAddress
             };
         }
+        #endregion
 
+        #region ResendEmailConfirmation
         //Resend email confirmation link
         [HttpPost("ResendEmailConfirmation")]
         public async Task<IActionResult> ResendEmailConfirmation(ResendEmailConfirmationDTO resendEmailConfirmationDTO)
         {
-            var user = await _userManager.FindByEmailAsync(resendEmailConfirmationDTO.EmailOrUserName)
-                        ?? await _userManager.FindByNameAsync(resendEmailConfirmationDTO.EmailOrUserName);
+            var user = await userManager.FindByEmailAsync(resendEmailConfirmationDTO.EmailOrUserName)
+                        ?? await userManager.FindByNameAsync(resendEmailConfirmationDTO.EmailOrUserName);
 
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
@@ -165,82 +172,96 @@ namespace TagerCom.Area.Identity.Controller
             if (user.EmailConfirmed)
                 return BadRequest(new { msg = "Already confirmed!" });
 
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
             var link = Url.Action("ConfirmEmail", "Account", new { area = "Identity", token = token, userId = user.Id }, Request.Scheme);
-            await _emailSender.SendEmailAsync(user.Email!, "Confirm Your Email!", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
+            await emailSender.SendEmailAsync(user.Email!, "Confirm Your Email!", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
 
             return Ok(new { msg = "Email confirmation link sent successfully." });
         }
+        #endregion
 
+        #region ForgetPassword
         //Send OTP for password reset
         [HttpPost("ForgetPassword")]
         public async Task<IActionResult> ForgetPassword(ForgetPasswordDTO forgetPasswordDTO)
         {
-            var user = await _userManager.FindByEmailAsync(forgetPasswordDTO.EmailOrUserName)
-                        ?? await _userManager.FindByNameAsync(forgetPasswordDTO.EmailOrUserName);
+            var user = await userManager.FindByEmailAsync(forgetPasswordDTO.EmailOrUserName)
+                        ?? await userManager.FindByNameAsync(forgetPasswordDTO.EmailOrUserName);
 
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
 
             var OTPNumber = new Random().Next(1000, 9999);
-            await _emailSender.SendEmailAsync(user.Email!, "Reset Password!", $"<h1>Reset password using {OTPNumber}. Don't share it!</h1>");
+            await emailSender.SendEmailAsync(user.Email!, "Reset Password!", $"<h1>Reset password using {OTPNumber}. Don't share it!</h1>");
 
-            await _userOTP.CreateAsync(new()
+            await userOTP.CreateAsync(new()
             {
                 ApplicationUserId = user.Id,
                 OTPNumber = OTPNumber.ToString(),
                 ValidTo = DateTime.UtcNow.AddDays(1)
             });
-            await _userOTP.CommitAsync();
+            await userOTP.CommitAsync();
 
             return Ok(new { msg = "OTP sent to your email successfully", userId = user.Id });
         }
+        #endregion
 
-        //Verify OTP before resetting password
+        #region ResetPassword
+
+        //Verify OTP before resetting password[HttpPost("ResetPassword")]
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword(ResetPasswordDTO resetPasswordDTO)
         {
-            var user = await _userManager.FindByIdAsync(resetPasswordDTO.ApplicationUserId);
+            var user = await userManager.FindByIdAsync(resetPasswordDTO.ApplicationUserId);
 
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
 
-            var userOTP = (await _userOTP.GetAsync(e => e.ApplicationUserId == resetPasswordDTO.ApplicationUserId))
-                .OrderBy(e => e.Id).LastOrDefault();
+            var otpRecords = (await userOTP.GetAsync(e => e.ApplicationUserId == resetPasswordDTO.ApplicationUserId))
+                     ?? Enumerable.Empty<UserOTP>();
 
-            if (userOTP is null)
-                return NotFound();
+            var latestOtp = otpRecords
+                    .OrderByDescending(e => e.Id) 
+                    .FirstOrDefault();
 
-            if (userOTP.OTPNumber != resetPasswordDTO.OTPNumber)
+            if (latestOtp is null)
+                return NotFound(new { msg = "No OTP found for this user." });
+
+            if (latestOtp.OTPNumber != resetPasswordDTO.OTPNumber)
                 return BadRequest(new { msg = "Invalid OTP" });
 
-            if (DateTime.UtcNow > userOTP.ValidTo)
+            if (DateTime.UtcNow > latestOtp.ValidTo)
                 return BadRequest(new { msg = "Expired OTP" });
 
+            // latestOtp.IsUsed = true;
+            // await userOTP.UpdateAsync(latestOtp); 
+            // await userOTP.CommitAsync();
+
+            // هنا نعيد نجاح التحقق ونعطي الـ userId للخطوة التالية (NewPassword)
             return Ok(new { msg = "OTP verified successfully", userId = user.Id });
         }
 
+
+        #endregion
+
+        #region NewPassword
         //Set new password after OTP verification
         [HttpPost("NewPassword")]
         public async Task<IActionResult> NewPassword(NewPasswordDTO newPasswordDTO)
         {
-            var user = await _userManager.FindByIdAsync(newPasswordDTO.ApplicationUserId);
+            var user = await userManager.FindByIdAsync(newPasswordDTO.ApplicationUserId);
 
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
 
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            await _userManager.ResetPasswordAsync(user, token, newPasswordDTO.Password);
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            await userManager.ResetPasswordAsync(user, token, newPasswordDTO.Password);
 
             return Ok(new { msg = "Password changed successfully!" });
         }
+        #endregion
 
-        //Logout current user session
-        [HttpPost("Logout")]
-        public async Task<IActionResult> Logout()
-        {
-            await _signInManager.SignOutAsync();
-            return RedirectToAction("Login", "Account", new { area = "Identity" });
-        }
+
+
     }
 }

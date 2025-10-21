@@ -37,30 +37,53 @@ namespace TagerCom.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? expression = null,
-            Expression<Func<T, object>>[]? includes = null, bool tracked = true)
+        //public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? expression = null,
+        //    Expression<Func<T, object>>[]? includes = null, bool tracked = true)
+        //{
+        //    var entities = _db.AsQueryable();
+
+        //    if (expression is not null)
+        //    {
+        //        entities = entities.Where(expression);
+        //    }
+
+        //    if (includes is not null)
+        //    {
+        //        foreach (var item in includes)
+        //        {
+        //            entities = entities.Include(item);
+        //        }
+        //    }
+
+        //    if (!tracked)
+        //    {
+        //        entities = entities.AsNoTracking();
+        //    }
+
+        //    return await entities.ToListAsync();
+        //}
+
+        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? filter = null, Expression<Func<T, object>>[]? include = null, bool tracked = true)
         {
-            var entities = _db.AsQueryable();
+            var data = _db.AsQueryable();
 
-            if (expression is not null)
+            if (filter is not null)
             {
-                entities = entities.Where(expression);
+                data = data.Where(filter);
             }
-
-            if (includes is not null)
+            if (include is not null)
             {
-                foreach (var item in includes)
+                foreach (var item in include)
                 {
-                    entities = entities.Include(item);
+                    data = data.Include(item);
                 }
             }
-
             if (!tracked)
             {
-                entities = entities.AsNoTracking();
+                data = data.AsNoTracking();
             }
 
-            return await entities.ToListAsync();
+            return await data.ToListAsync();
         }
 
         public async Task<T?> GetOneAsync(Expression<Func<T, bool>> expression, Expression<Func<T, object>>[]? includes = null, bool tracked = true)
