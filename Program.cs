@@ -1,12 +1,3 @@
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Swagger;
-using Swashbuckle.AspNetCore.SwaggerUI;
-using TagerCom.DataAcess;
-using TagerCom.Utility.DbInitalizer;
-using TagerCom.Utility.DbInitializer;
 namespace TagerCom
 {
     public class Program
@@ -23,13 +14,16 @@ namespace TagerCom
 
             builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase")));
 
-            builder.Services.AddIdentity<IdentityUser, IdentityRole>(option =>
+            builder.Services.AddIdentity<ApplicationUser, IdentityRole>(option =>
             {
                 option.Password.RequiredLength = 8;      // Minimum password length
                 option.User.RequireUniqueEmail = true;   // Require unique email per user
             }).AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
             builder.Services.AddScoped<IDbInitializer, DbInitializer>();
+            builder.Services.AddTransient<IEmailSender, EmailSender>();
+            builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository pattern
+
 
             // Add Swagger UI support
             builder.Services.AddEndpointsApiExplorer();

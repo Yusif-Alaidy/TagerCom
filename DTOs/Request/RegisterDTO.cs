@@ -4,13 +4,9 @@ namespace TagerCom.ViewModels
 {
     public class RegisterDTO
     {
-        public int Id { get; set; }
+
 
         [Required]
-        public string Name { get; set; } = string.Empty;
-
-        [Required]
-        [DataType(DataType.EmailAddress)]
         public string UserName { get; set; } = string.Empty;
 
         [Required]
@@ -23,13 +19,8 @@ namespace TagerCom.ViewModels
         public string Password { get; set; } = string.Empty;
 
         [Required]
-        [DataType(DataType.Password)]
+        [DataType(DataType.Password), Compare("Password")]
         public string ConfirmPassword { get; set; } = string.Empty;
 
-        public string City { get; set; } = string.Empty;
-
-        public string street { get; set; } = string.Empty;
-
-        public string PostalCode { get; set; }
     }
 }
