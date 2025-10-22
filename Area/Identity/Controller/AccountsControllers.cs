@@ -1,9 +1,12 @@
-﻿namespace TagerCom.Area.Identity.Controller
+﻿using Microsoft.AspNetCore.WebUtilities;
+using TagerCom.Models;
+
+namespace TagerCom.Area.Identity.Controller
 {
-    [Route("api/[area]/[controller]")]
     [Area("Identity")]
     [ApiController]
-    public class AccountsControllers : ControllerBase
+    [Route("api/[area]/[controller]")]
+    public class AccountsController : ControllerBase
     {
         #region Fields
 
@@ -16,7 +19,7 @@
         #endregion
 
         #region Constructore
-        public AccountsControllers( UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
+        public AccountsController( UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
         {
             this.signInManager = signInManager;
             this.configuration = configuration;
@@ -31,21 +34,23 @@
         [HttpPost("Register")]
         public async Task<IActionResult> Register(RegisterDTO registerDTO)
         {
-            ApplicationUser applicationuser = new()
+            ApplicationUser applicationUser = new()
             {
                 UserName = registerDTO.UserName,
                 Email = registerDTO.Email,
             };
 
-            var result = await userManager.CreateAsync(applicationuser, registerDTO.Password);
+            var result = await userManager.CreateAsync(applicationUser, registerDTO.Password);
 
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
             // Generate email confirmation link
-            var token = await userManager.GenerateEmailConfirmationTokenAsync(applicationuser);
-            var link = Url.Action("ConfirmEmail", "Accounts", new { Area = "Identity", token = token, UserId = applicationuser }, Request.Scheme);
-            await emailSender.SendEmailAsync(applicationuser.Email, "Confirm Your Email", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(applicationUser);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            //var link = Url.Action("ConfirmEmail", "Accounts", new { Area = "Identity", token = token, UserId = applicationUser }, Request.Scheme);
+            var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ConfirmEmail?userId={applicationUser.Id}&token={encodedToken}";
+            await emailSender.SendEmailAsync(applicationUser.Email, "Confirm Your Email", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
 
             return Ok(new { SuccMsg = "User created successfully. Please confirm your email." });
         }
@@ -53,14 +58,15 @@
 
         #region ConfirmEmail
         //Confirm user email using token
-        [HttpPost]
-        public async Task<IActionResult> ConfirmEmail(string token, string UserId)
+        [HttpGet("ConfirmEmail")]
+        public async Task<IActionResult> ConfirmEmail([FromQuery]string userId, [FromQuery]string token)
         {
-            var user = await userManager.FindByIdAsync(UserId);
+            var user = await userManager.FindByIdAsync(userId);
             if (user == null)
                 return NotFound();
 
-            var result = await userManager.ConfirmEmailAsync(user, token);
+            var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+            var result = await userManager.ConfirmEmailAsync(user, decodedToken);
             if (!result.Succeeded)
                 return BadRequest(new { msg = "Link expired, please resend confirmation email." });
 
