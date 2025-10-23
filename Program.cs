@@ -1,3 +1,5 @@
+using System.Configuration;
+
 namespace TagerCom
 {
     public class Program
@@ -24,6 +26,15 @@ namespace TagerCom
             builder.Services.AddTransient<IEmailSender, EmailSender>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository pattern
 
+            //Login By Google Authentication
+            builder.Services.AddAuthentication()
+            .AddGoogle("google", opt =>
+            {
+                var googleAuth = builder.Configuration.GetSection("Authentication:Google");
+                opt.ClientId = googleAuth["ClientId"]??" ";
+                opt.ClientSecret = googleAuth["ClientSecret"]?? " ";
+                opt.SignInScheme = IdentityConstants.ExternalScheme;
+            });
 
             // Add Swagger UI support
             builder.Services.AddEndpointsApiExplorer();

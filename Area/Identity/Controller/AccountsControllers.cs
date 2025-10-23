@@ -1,4 +1,6 @@
-﻿namespace TagerCom.Area.Identity.Controller
+﻿using Microsoft.AspNetCore.Identity;
+
+namespace TagerCom.Area.Identity.Controller
 {
     [Route("api/[area]/[controller]")]
     [Area("Identity")]
@@ -261,7 +263,76 @@
         }
         #endregion
 
+        #region LoginByGoogle
+        [HttpGet]
 
+        public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
+        {
+            if (remoteError != null)
+            {
+                ModelState.AddModelError(string.Empty, $"Error from external provider: {remoteError}");
+                return RedirectToAction(nameof(Login));
+            }
+
+            var info = await signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+
+            // Try signing in with an external login
+            var signInResult = await signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false);
+            if (signInResult.Succeeded)
+            {
+                return LocalRedirect(returnUrl ?? "/");
+            }
+
+            // If the user cannot log in, try finding them by email
+            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            var name = info.Principal.FindFirstValue(ClaimTypes.Name);
+            if (email != null)
+            {
+                var user = await userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    // Create a new user if they do not exist
+                    Random rand=new Random();
+                    string randUser=rand.Next(1000,9999).ToString();
+                    user = new ApplicationUser
+                    {
+                        UserName =$"{name.Replace(" ", "")}{randUser}" ,
+                        Email = email
+                    };
+                    var createUserResult = await userManager.CreateAsync(user);
+                    if (!createUserResult.Succeeded)
+                    {
+                        ModelState.AddModelError(string.Empty, "Error creating user.");
+                        return RedirectToAction(nameof(Login));
+                    }
+                }
+
+                // Ensure the external login is linked
+                var existingLogins = await userManager.GetLoginsAsync(user);
+                var hasGoogleLogin = existingLogins.Any(l => l.LoginProvider == info.LoginProvider);
+
+                if (!hasGoogleLogin)
+                {
+                    var addLoginResult = await userManager.AddLoginAsync(user, info);
+                    if (!addLoginResult.Succeeded)
+                    {
+                        ModelState.AddModelError(string.Empty, "Error linking external login.");
+                        return RedirectToAction(nameof(Login));
+                    }
+                }
+
+                // Sign in the user
+                await signInManager.SignInAsync(user, isPersistent: false);
+                return LocalRedirect(returnUrl ?? "/");
+            }
+
+            return RedirectToAction(nameof(Login));
+        }
+        #endregion
 
     }
 }
