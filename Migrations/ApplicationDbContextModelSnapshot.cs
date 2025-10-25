@@ -243,10 +243,6 @@ namespace TagerCom.Migrations
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CreatedByIp")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("Expires")
                         .HasColumnType("datetime2");
 

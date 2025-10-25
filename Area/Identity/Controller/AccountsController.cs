@@ -1,11 +1,18 @@
-﻿using Microsoft.AspNetCore.WebUtilities;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
+using TagerCom.Models;
+using TagerCom.Services;
+using TagerCom.ViewModels;
+using System.Security.Claims;
 using TagerCom.Models;
 
 namespace TagerCom.Area.Identity.Controller
 {
     [Area("Identity")]
     [ApiController]
-    [Route("api/[area]/[controller]")]
+    [Route("api/Identity/[controller]")]
     public class AccountsController : ControllerBase
     {
         #region Fields
@@ -15,15 +22,21 @@ namespace TagerCom.Area.Identity.Controller
         private readonly SignInManager<ApplicationUser> signInManager;
         private readonly IConfiguration configuration;
         private readonly IRepository<UserOTP> userOTP;
+        private readonly ApplicationDbContext context;
+        private readonly TokenService tokenService;
+        private readonly IRepository<RefreshToken> refreshToken;
 
         #endregion
 
         #region Constructore
-        public AccountsController( UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
+        public AccountsController(ApplicationDbContext _context ,TokenService tokenService,IRepository<RefreshToken> refreshToken, UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
         {
             this.signInManager = signInManager;
             this.configuration = configuration;
             this.emailSender = emailSender;
+            this.context = _context;
+            this.tokenService = tokenService;
+            this.refreshToken = refreshToken;
             this.userManager = userManager;
             this.userOTP = userOTP;
         }
@@ -55,7 +68,7 @@ namespace TagerCom.Area.Identity.Controller
             return Ok(new { SuccMsg = "User created successfully. Please confirm your email." });
         }
         #endregion
-
+        
         #region ConfirmEmail
         //Confirm user email using token
         [HttpGet("ConfirmEmail")]
@@ -72,95 +85,85 @@ namespace TagerCom.Area.Identity.Controller
 
             return Ok(new { msg = "Email confirmed successfully." });
         }
-
-        //Login user and return access + refresh tokens
-        [HttpPost("Login")]
+    
         #endregion
 
         #region Login
-        public async Task<IActionResult> Login(LoginDTO loginDTO)
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login([FromBody] LoginDTO model)
         {
-            var user = await userManager.FindByEmailAsync(loginDTO.EmailOrUserName)
-                  ?? await userManager.FindByNameAsync(loginDTO.EmailOrUserName);
+            var user = await userManager.FindByEmailAsync(model.EmailOrUserName)
+                       ?? await userManager.FindByNameAsync(model.EmailOrUserName);
 
-            if (user == null)
-            {
-                return NotFound(new NotificationDTO
-                {
-                    Msg = "Invalid username or password",
-                    TraceID = Guid.NewGuid().ToString(),
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
+            if (user == null || !await userManager.CheckPasswordAsync(user, model.Password))
+                return Unauthorized(new { msg = "Invalid username or password" });
 
-            var result = await signInManager.PasswordSignInAsync(user, loginDTO.Password, loginDTO.RememberME, true);
-
-            if (!result.Succeeded)
-            {
-                if (result.IsLockedOut)
-                    return BadRequest(new { msg = "Too many attempts" });
-
-                return NotFound(new { msg = "Invalid username or password" });
-            }
-
-            if (!user.EmailConfirmed)
-                return BadRequest(new { msg = "Please confirm your email first." });
-
-            if (!user.LockoutEnabled)
-                return BadRequest(new { msg = $"You are blocked until {user.LockoutEnd}" });
+            //var oldTokens = await refreshToken.GetAsync(e=>e.UserId == user.Id);
+            var oldToken = context.RefreshTokens.Where(e => e.UserId == user.Id);
+            context.RefreshTokens.RemoveRange(oldToken);
+            context.SaveChanges();
 
             var roles = await userManager.GetRolesAsync(user);
-
-            var Claims = new List<Claim>() {
-                new Claim(ClaimTypes.NameIdentifier,user.Id),
-                new Claim(ClaimTypes.Name,user.UserName),
-                new Claim(ClaimTypes.Email,user.Email)
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.UserName)
             };
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
 
-            foreach (var item in roles)
-                Claims.Add(new Claim(ClaimTypes.Role, item));
+            var refreshToken = new RefreshToken
+            {
+                Token = Guid.NewGuid().ToString(),
+                UserId = user.Id,
+                Expires = DateTime.UtcNow.AddDays(15),
+                Created = DateTime.UtcNow,
 
-            SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:key"] ?? " "));
-            SigningCredentials signingCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            };
+            context.RefreshTokens.Add(refreshToken);
+            context.SaveChanges();
 
-            JwtSecurityToken token = new JwtSecurityToken(
-                issuer: configuration["JWT:issuer"],
-                audience: configuration["JWT:audience"],
-                claims: Claims,
-                expires: DateTime.Now.AddMinutes(50),
-                signingCredentials: signingCredentials
-            );
+            // TokenService
+            var accessToken = tokenService.GenerateAccessToken(claims);
 
-            //Create new refresh token
-            var refreshToken = GenerateRefreshToken(HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
-
-            //Remove old expired refresh tokens
-            user.RefreshTokens.RemoveAll(t => t.IsExpired);
-
-            // Link new refresh token to user
-            user.RefreshTokens.Add(refreshToken);
-            await userManager.UpdateAsync(user);
-
+            var accessTokenExpiration = DateTime.UtcNow.AddMinutes(15);
+            
             return Ok(new
             {
-                accessToken = new JwtSecurityTokenHandler().WriteToken(token),
+                accessToken,
+                access_token_expires_at = accessTokenExpiration.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
                 refreshToken = refreshToken.Token,
-                expiresAt = token.ValidTo
+                refresh_token_expires_at = refreshToken.Expires.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
             });
         }
+
         #endregion
 
         #region GenerateRefreshToken
-        //Helper method to generate refresh token
-        private RefreshToken GenerateRefreshToken(string ipAddress)
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshToken)
         {
-            return new RefreshToken
+            var storedToken = await context.RefreshTokens.FirstOrDefaultAsync(e => e.Token == refreshToken.RefreshToken);
+            if (storedToken == null) return Unauthorized("Invalid refresh token");
+            if (storedToken.IsExpired) return Unauthorized("Refresh Token Expired");
+            var user = await userManager.FindByIdAsync(storedToken.UserId);
+            if (user == null) return Unauthorized();
+
+            var roles = await userManager.GetRolesAsync(user);
+            var claims = new List<Claim>
             {
-                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-                Expires = DateTime.UtcNow.AddDays(7),
-                Created = DateTime.UtcNow,
-                CreatedByIp = ipAddress
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, user.UserName)
             };
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
+            // TokenService
+            var newAccessToken = tokenService.GenerateAccessToken(claims);
+
+            return Ok(new { AccessToken = newAccessToken});
         }
         #endregion
 
@@ -267,7 +270,7 @@ namespace TagerCom.Area.Identity.Controller
         }
         #endregion
 
-
+        
 
     }
 }

@@ -12,8 +12,8 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251020161934_init")]
-    partial class init
+    [Migration("20251024184834_Create RefreshToken")]
+    partial class CreateRefreshToken
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -245,10 +245,6 @@ namespace TagerCom.Migrations
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedByIp")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("Expires")
                         .HasColumnType("datetime2");

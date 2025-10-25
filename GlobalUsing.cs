@@ -8,7 +8,7 @@ global using System.Security.Cryptography;
 global using System.Text;
 global using TagerCom.DTOs.Request;
 global using TagerCom.DTOs.Response;
-global  using TagerCom.Models;
+global using TagerCom.Models;
 global using TagerCom.Repositories.IRepositories;
 global using TagerCom.Repositories;
 global using TagerCom.ViewModels;
