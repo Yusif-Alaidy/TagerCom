@@ -182,7 +182,9 @@ namespace TagerCom.Area.Identity.Controller
                 return BadRequest(new { msg = "Already confirmed!" });
 
             var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-            var link = Url.Action("ConfirmEmail", "Account", new { area = "Identity", token = token, userId = user.Id }, Request.Scheme);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            //var link = Url.Action("ConfirmEmail", "Accounts", new { Area = "Identity", token = token, UserId = applicationUser }, Request.Scheme);
+            var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ConfirmEmail?userId={user.Id}&token={encodedToken}";
             await emailSender.SendEmailAsync(user.Email!, "Confirm Your Email!", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
 
             return Ok(new { msg = "Email confirmation link sent successfully." });
