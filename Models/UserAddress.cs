@@ -14,6 +14,6 @@
         public bool IsDefault { get; set; } = false;
 
         // Navigation
-        public User User { get; set; } = null!;
+        public ApplicationUser User { get; set; } = null!;
     }
 }

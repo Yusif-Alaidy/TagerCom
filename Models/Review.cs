@@ -11,6 +11,6 @@
 
         // Navigation
         public Product Product { get; set; } = null!;
-        public User Customer { get; set; } = null!;
+        public ApplicationUser Customer { get; set; } = null!;
     }
 }

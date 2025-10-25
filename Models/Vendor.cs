@@ -10,7 +10,5 @@
         public decimal RevenueShare { get; set; }
         public bool Approved { get; set; } = false;
 
-        // Navigation
-        public User User { get; set; } = null!;
     }
 }
