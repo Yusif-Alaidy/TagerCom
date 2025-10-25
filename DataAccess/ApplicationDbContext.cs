@@ -39,11 +39,6 @@ namespace TagerCom.DataAccess
         {
             base.OnModelCreating(builder);
 
-            //// تعريف العلاقة بين ApplicationUser و RefreshToken
-            //builder.Entity<RefreshToken>()
-            //    .HasOne(rt => rt.User)
-            //    .WithMany(u => u.RefreshTokens)
-            //    .HasForeignKey(rt => rt.UserId);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

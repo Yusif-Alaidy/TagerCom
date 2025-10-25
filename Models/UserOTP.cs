@@ -7,5 +7,6 @@
         public ApplicationUser ApplicationUser { get; set; }
         public string OTPNumber { get; set; }
         public DateTime ValidTo { get; set; }
+        public bool IsUsed { get; set; } = false;
     }
 }

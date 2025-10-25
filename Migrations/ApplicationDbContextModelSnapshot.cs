@@ -676,6 +676,9 @@ namespace TagerCom.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<bool>("IsUsed")
+                        .HasColumnType("bit");
+
                     b.Property<string>("OTPNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
