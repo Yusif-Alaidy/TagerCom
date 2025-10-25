@@ -9,6 +9,6 @@ namespace TagerCom.Models
         public decimal Balance { get; set; } = 0;
 
         // Navigation
-        public User User { get; set; } = null!;
+        public ApplicationUser User { get; set; }
     }
 }

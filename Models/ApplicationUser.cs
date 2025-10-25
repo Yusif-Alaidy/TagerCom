@@ -7,13 +7,9 @@ namespace TagerCom.Models
     {
 
         public string? Name { get; set; }= string.Empty;
-
-        public string? City { get; set; } 
-
-        public string? street { get; set; } 
-        public string? PostalCode { get; set; } 
-
         public List<RefreshToken> RefreshTokens { get; set; } = new();
-
+        // Relationships
+        public Vendor? Vendor { get; set; }
     }
+
 }

@@ -7,6 +7,6 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
-        public User User { get; set; } = null!;
+        public ApplicationUser User { get; set; }
     }
 }
