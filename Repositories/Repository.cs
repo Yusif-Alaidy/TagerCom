@@ -90,5 +90,10 @@ namespace TagerCom.Repositories
         {
             return (await GetAsync(expression, includes, tracked)).FirstOrDefault();
         }
+
+        public async Task DeleteRangeAsync(List<T> entity)
+        {
+            _db.RemoveRange(entity);
+        }
     }
 }

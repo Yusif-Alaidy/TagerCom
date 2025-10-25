@@ -16,5 +16,7 @@ namespace TagerCom.Repositories.IRepositories
             Expression<Func<T, object>>[]? includes = null, bool tracked = true);
 
         Task<T?> GetOneAsync(Expression<Func<T, bool>> expression, Expression<Func<T, object>>[]? includes = null, bool tracked = true);
+
+        Task DeleteRangeAsync(List<T> entity);
     }
 }

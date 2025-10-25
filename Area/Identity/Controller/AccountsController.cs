@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using NuGet.Protocol;
+using System.Security.Claims;
+using TagerCom.DTOs.Request;
+using TagerCom.Models;
 using TagerCom.Models;
 using TagerCom.Services;
 using TagerCom.ViewModels;
-using System.Security.Claims;
-using TagerCom.Models;
 
 namespace TagerCom.Area.Identity.Controller
 {
@@ -94,7 +96,7 @@ namespace TagerCom.Area.Identity.Controller
         {
             var user = await userManager.FindByEmailAsync(model.EmailOrUserName)
                        ?? await userManager.FindByNameAsync(model.EmailOrUserName);
-
+            if (!user.EmailConfirmed) return BadRequest(new {msg = "Please Confirem Your Email"});
             if (user == null || !await userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new { msg = "Invalid username or password" });
 
@@ -191,20 +193,33 @@ namespace TagerCom.Area.Identity.Controller
         }
         #endregion
 
+
         #region ForgetPassword
         //Send OTP for password reset
         [HttpPost("ForgetPassword")]
         public async Task<IActionResult> ForgetPassword(ForgetPasswordDTO forgetPasswordDTO)
         {
+            // ### Get user and Check if he is there ------------------------------------------------
             var user = await userManager.FindByEmailAsync(forgetPasswordDTO.EmailOrUserName)
                         ?? await userManager.FindByNameAsync(forgetPasswordDTO.EmailOrUserName);
-
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
+            // --------------------------------------------------------------------------------------
 
+            // ### Delete All Old OTPs ------------------------------------------------------------------------
+            //var oldOTP = context.UserOTPs.Where(e=>e.ApplicationUserId == user.Id);
+            //context.RemoveRange(oldOTP);
+            //context.SaveChanges();
+            var oldOTP = (await userOTP.GetAsync(e => e.ApplicationUserId == user.Id)).ToList();
+            if (oldOTP.Any())
+            {
+                await userOTP.DeleteRangeAsync(oldOTP);
+            }
+            userOTP.CommitAsync();
+            // ------------------------------------------------------------------------------------------------
+
+            // ### Creat OTPs and Send it to the user email ------------------------------------------------------------------------------------
             var OTPNumber = new Random().Next(1000, 9999);
-            await emailSender.SendEmailAsync(user.Email!, "Reset Password!", $"<h1>Reset password using {OTPNumber}. Don't share it!</h1>");
-
             await userOTP.CreateAsync(new()
             {
                 ApplicationUserId = user.Id,
@@ -212,61 +227,75 @@ namespace TagerCom.Area.Identity.Controller
                 ValidTo = DateTime.UtcNow.AddDays(1)
             });
             await userOTP.CommitAsync();
+            await emailSender.SendEmailAsync(user.Email!, "Reset Password!", $"<h1>Reset password using {OTPNumber}. Don't share it!</h1>");
+            // ---------------------------------------------------------------------------------------------------------------------------------
 
-            return Ok(new { msg = "OTP sent to your email successfully", userId = user.Id });
+            var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ResetPassword";
+            return Ok(new { msg = "OTP sent to your email successfully", userId = user.Id, NextStep = link});
         }
         #endregion
 
         #region ResetPassword
-
-        //Verify OTP before resetting password[HttpPost("ResetPassword")]
         [HttpPost("ResetPassword")]
         public async Task<IActionResult> ResetPassword(ResetPasswordDTO resetPasswordDTO)
         {
-            var user = await userManager.FindByIdAsync(resetPasswordDTO.ApplicationUserId);
+            // ### Get OTP and Check in it -------------------------------------------------------------------- 
+            //var OTP = context.UserOTPs.FirstOrDefault(e => e.OTPNumber ==  resetPasswordDTO.OTPNumber);
+            var OTP = await userOTP.GetOneAsync(e=> e.OTPNumber == resetPasswordDTO.OTPNumber);
+            if (OTP == null) return BadRequest(new { msg = "Invalid OTP" });
+            // ------------------------------------------------------------------------------------------------
 
+            // ### Get user debended OTP and check in it --------------------------------------------------
+            var user = await userManager.FindByIdAsync(OTP.ApplicationUserId);
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
+            // --------------------------------------------------------------------------------------------
 
-            var otpRecords = (await userOTP.GetAsync(e => e.ApplicationUserId == resetPasswordDTO.ApplicationUserId))
-                     ?? Enumerable.Empty<UserOTP>();
+            //var otpRecords = (await userOTP.GetAsync(e => e.ApplicationUserId == OTP.ApplicationUserId))
+            //         ?? Enumerable.Empty<UserOTP>();
 
-            var latestOtp = otpRecords
-                    .OrderByDescending(e => e.Id) 
-                    .FirstOrDefault();
+            //var latestOtp = otpRecords
+            //        .OrderByDescending(e => e.Id) 
+            //        .FirstOrDefault();
 
-            if (latestOtp is null)
-                return NotFound(new { msg = "No OTP found for this user." });
-
-            if (latestOtp.OTPNumber != resetPasswordDTO.OTPNumber)
-                return BadRequest(new { msg = "Invalid OTP" });
-
-            if (DateTime.UtcNow > latestOtp.ValidTo)
+            // ### Check is this OTP Valid Or Not ------------------------------------------------
+            if(OTP.IsUsed == true) return BadRequest(new { msg = "This OTP Is Already Used" });
+            if (DateTime.UtcNow > OTP.ValidTo)
                 return BadRequest(new { msg = "Expired OTP" });
+            OTP.IsUsed = true;
+            //context.SaveChanges();
+            userOTP.CommitAsync();
+            // -----------------------------------------------------------------------------------
 
-            // latestOtp.IsUsed = true;
-            // await userOTP.UpdateAsync(latestOtp); 
-            // await userOTP.CommitAsync();
-
-            // هنا نعيد نجاح التحقق ونعطي الـ userId للخطوة التالية (NewPassword)
-            return Ok(new { msg = "OTP verified successfully", userId = user.Id });
+            var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/NewPassword";
+            return Ok(new { msg = "OTP verified successfully", userId = user.Id , NextStep = link});
         }
 
 
         #endregion
 
-        #region NewPassword
-        //Set new password after OTP verification
+         #region NewPassword
         [HttpPost("NewPassword")]
         public async Task<IActionResult> NewPassword(NewPasswordDTO newPasswordDTO)
         {
-            var user = await userManager.FindByIdAsync(newPasswordDTO.ApplicationUserId);
+            // ## Get OTP Depended UserId and check for it --------------------------------------------------------------
+            //var OTP = context.UserOTPs.FirstOrDefault(e=> e.ApplicationUserId == newPasswordDTO.ApplicationUserId);
+            var OTP = await userOTP.GetOneAsync(e=> e.ApplicationUserId == newPasswordDTO.ApplicationUserId);
+            if (OTP is null) return BadRequest(new { msg = "This User Name need a new OTP Go reset password please" });
+            if (OTP.IsUsed == false) return BadRequest(new { msg = "Please Use Your OTP in reset Password" });
+            // ----------------------------------------------------------------------------------------------------------
 
+            // ## Get User use request ---------------------------------------------------------
+            var user = await userManager.FindByIdAsync(newPasswordDTO.ApplicationUserId);
             if (user is null)
                 return NotFound(new { msg = "Invalid username or email" });
-
+            // ---------------------------------------------------------------------------------
+            var resualt = await userManager.CheckPasswordAsync(user, newPasswordDTO.Password);
+            if (resualt) return BadRequest(new { msg = "This is the old password" });
+            // Change Password -------------------------------------------------------------
             var token = await userManager.GeneratePasswordResetTokenAsync(user);
             await userManager.ResetPasswordAsync(user, token, newPasswordDTO.Password);
+            // -----------------------------------------------------------------------------
 
             return Ok(new { msg = "Password changed successfully!" });
         }
