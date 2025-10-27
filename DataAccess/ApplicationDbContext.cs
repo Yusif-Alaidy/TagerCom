@@ -38,6 +38,7 @@ namespace TagerCom.DataAccess
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            ConfigureMovie(builder);
 
         }
 
@@ -53,6 +54,15 @@ namespace TagerCom.DataAccess
                 var connectionString = config.GetConnectionString("DefaultConnection");
                 optionsBuilder.UseSqlServer(connectionString);
             }
+        }
+        private static void ConfigureMovie(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ApplicationUser>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProfileImgUrl).HasDefaultValue("default.jpg").ValueGeneratedOnAdd();
+
+            });
         }
     }
 }

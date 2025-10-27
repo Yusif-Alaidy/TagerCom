@@ -5,7 +5,6 @@ namespace TagerCom.Repositories.IRepositories
 {
     public interface IRepository<T> where T : class
     {
-        Task<T> CreateAsync(T entity);
 
         void Update(T entity);
 
@@ -18,5 +17,9 @@ namespace TagerCom.Repositories.IRepositories
         Task<T?> GetOneAsync(Expression<Func<T, bool>> expression, Expression<Func<T, object>>[]? includes = null, bool tracked = true);
 
         Task DeleteRangeAsync(List<T> entity);
+
+        #region Create
+        Task AddAsync(T entity);
+        #endregion
     }
 }

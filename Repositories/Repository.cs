@@ -16,10 +16,9 @@ namespace TagerCom.Repositories
         }
 
         // CRUD
-        public async Task<T> CreateAsync(T entity)
+        public async Task AddAsync(T entity)
         {
             await _db.AddAsync(entity);
-            return entity;
         }
 
         public void Update(T entity)
