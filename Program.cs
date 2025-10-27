@@ -52,6 +52,7 @@ namespace TagerCom
             builder.Services.AddScoped<IDbInitializer, DbInitializer>();
             builder.Services.AddTransient<IEmailSender, EmailSender>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository pattern
+            builder.Services.AddScoped<IUserRepository, UserRepository>(); // User repository 
 
 
             // Add Swagger UI support

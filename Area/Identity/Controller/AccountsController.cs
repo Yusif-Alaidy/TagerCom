@@ -49,6 +49,7 @@ namespace TagerCom.Area.Identity.Controller
         [HttpPost("Register")]
         public async Task<IActionResult> Register(RegisterDTO registerDTO)
         {
+
             ApplicationUser applicationUser = new()
             {
                 UserName = registerDTO.UserName,
@@ -59,6 +60,7 @@ namespace TagerCom.Area.Identity.Controller
 
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
+
 
             // Generate email confirmation link
             var token = await userManager.GenerateEmailConfirmationTokenAsync(applicationUser);
@@ -96,9 +98,9 @@ namespace TagerCom.Area.Identity.Controller
         {
             var user = await userManager.FindByEmailAsync(model.EmailOrUserName)
                        ?? await userManager.FindByNameAsync(model.EmailOrUserName);
-            if (!user.EmailConfirmed) return BadRequest(new {msg = "Please Confirem Your Email"});
             if (user == null || !await userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new { msg = "Invalid username or password" });
+            if (!user.EmailConfirmed) return BadRequest(new {msg = "Please Confirem Your Email"});
 
             //var oldTokens = await refreshToken.GetAsync(e=>e.UserId == user.Id);
             var oldToken = context.RefreshTokens.Where(e => e.UserId == user.Id);
@@ -220,7 +222,7 @@ namespace TagerCom.Area.Identity.Controller
 
             // ### Creat OTPs and Send it to the user email ------------------------------------------------------------------------------------
             var OTPNumber = new Random().Next(1000, 9999);
-            await userOTP.CreateAsync(new()
+            await userOTP.AddAsync(new()
             {
                 ApplicationUserId = user.Id,
                 OTPNumber = OTPNumber.ToString(),
