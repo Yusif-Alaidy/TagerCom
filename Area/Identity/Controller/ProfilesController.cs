@@ -129,7 +129,7 @@ namespace TagerCom.Area.Identity.Controller
             // End Map request data ------------------------------------------------------------------
 
             // Save address in database --------------------------------------------------------------
-            await addressRepository.AddAsync(address);
+            //await addressRepository.AddAsync(address);
             await addressRepository.CommitAsync();
             // End Save address ----------------------------------------------------------------------
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using System.Linq.Expressions;
 using TagerCom.Repositories.IRepositories;
 
@@ -6,19 +7,20 @@ namespace TagerCom.Repositories
 {
     public class Repository<T> : IRepository<T> where T : class
     {
-        private DataAccess.ApplicationDbContext _context;// = new();
+        private ApplicationDbContext _context;// = new();
         private DbSet<T> _db;
 
-        public Repository(DataAccess.ApplicationDbContext context)
+        public Repository(ApplicationDbContext context)
         {
             _context = context;
             _db = _context.Set<T>();
         }
 
         // CRUD
-        public async Task AddAsync(T entity)
+        public async Task<T> CreateAsync(T entity)
         {
             await _db.AddAsync(entity);
+            return entity;
         }
 
         public void Update(T entity)
@@ -31,68 +33,95 @@ namespace TagerCom.Repositories
             _db.Remove(entity);
         }
 
+        public async Task DeleteRangeAsync(List<T> entity)
+        {
+            _db.RemoveRange(entity);
+        }
+
         public async Task CommitAsync()
         {
             await _context.SaveChangesAsync();
         }
 
-        //public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? expression = null,
-        //    Expression<Func<T, object>>[]? includes = null, bool tracked = true)
-        //{
-        //    var entities = _db.AsQueryable();
+        
 
-        //    if (expression is not null)
-        //    {
-        //        entities = entities.Where(expression);
-        //    }
+       
 
-        //    if (includes is not null)
-        //    {
-        //        foreach (var item in includes)
-        //        {
-        //            entities = entities.Include(item);
-        //        }
-        //    }
-
-        //    if (!tracked)
-        //    {
-        //        entities = entities.AsNoTracking();
-        //    }
-
-        //    return await entities.ToListAsync();
-        //}
-
-        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? filter = null, Expression<Func<T, object>>[]? include = null, bool tracked = true)
+        public async Task<T?> GetOneAsync(Expression<Func<T, bool>>? filter = null,
+      Func<IQueryable<T>, IIncludableQueryable<T, object>>? include = null,
+      bool tracked = true)
         {
-            var data = _db.AsQueryable();
+            IQueryable<T> query = _db;
 
-            if (filter is not null)
+            // لو مش عايز التتبع
+            if (!tracked)
+                query = query.AsNoTracking();
+
+            // لو فيه علاقات عايز تضمها
+            if (include != null)
+                query = include(query);
+
+            // لو فيه شرط فلترة
+            if (filter != null)
+                query = query.Where(filter);
+
+            // رجع أول عنصر أو null
+            return await query.FirstOrDefaultAsync();
+
+        }
+
+        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null,
+     Func<IQueryable<T>, IIncludableQueryable<T, object>>? include = null,
+     bool tracked = true)
+        {
+            IQueryable<T> query = _db;
+
+            // لو مش عايز التتبع
+            if (!tracked)
+                query = query.AsNoTracking();
+
+            // ضم العلاقات (Includes)
+            if (include != null)
+                query = include(query);
+
+            // لو فيه شرط فلترة
+            if (filter != null)
+                query = query.Where(filter);
+
+            // نفذ الاستعلام ورجع النتايج كلها كـ List
+            return await query.ToListAsync();
+
+        }
+
+
+        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? expression = null,
+             Expression<Func<T, object>>[]? includes = null, bool tracked = true)
+        {
+            var entities = _db.AsQueryable();
+
+            if (expression is not null)
             {
-                data = data.Where(filter);
+                entities = entities.Where(expression);
             }
-            if (include is not null)
+
+            if (includes is not null)
             {
-                foreach (var item in include)
+                foreach (var item in includes)
                 {
-                    data = data.Include(item);
+                    entities = entities.Include(item);
                 }
             }
+
             if (!tracked)
             {
-                data = data.AsNoTracking();
+                entities = entities.AsNoTracking();
             }
 
-            return await data.ToListAsync();
+            return await entities.ToListAsync();
         }
 
-        public async Task<T?> GetOneAsync(Expression<Func<T, bool>> expression, Expression<Func<T, object>>[]? includes = null, bool tracked = true)
-        {
-            return (await GetAsync(expression, includes, tracked)).FirstOrDefault();
-        }
 
-        public async Task DeleteRangeAsync(List<T> entity)
-        {
-            _db.RemoveRange(entity);
-        }
+
+       
     }
 }

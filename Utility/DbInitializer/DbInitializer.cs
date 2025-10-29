@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TagerCom.DataAccess;
-using TagerCom.Utility.DbInitalizer;
+using TagerCom.Utility.DbInitializer;
 
 namespace TagerCom.Utility.DbInitializer
 {
@@ -33,14 +33,21 @@ namespace TagerCom.Utility.DbInitializer
             try
             {
                 // Create Update-database --------------------------------
-                if (Context.Database.GetPendingMigrations().Any())
+                var pending = Context.Database.GetPendingMigrations();
+                if (pending.Any())
                 {
+                    Console.WriteLine("Applying pending migrations...");
                     Context.Database.Migrate();
+                    Console.WriteLine("Migrations applied successfully.");
                 }
+
+
+
                 // -------------------------------------------------------
 
                 // Seed data for role --------------------------------------------------------
-                if (RoleManger.Roles == null)
+                if (!RoleManger.Roles.Any())
+
                 {
 
                     RoleManger.CreateAsync(new("SuperAdmin")).GetAwaiter().GetResult();

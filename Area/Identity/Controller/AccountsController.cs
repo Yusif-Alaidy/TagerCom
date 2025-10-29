@@ -49,7 +49,6 @@ namespace TagerCom.Area.Identity.Controller
         [HttpPost("Register")]
         public async Task<IActionResult> Register(RegisterDTO registerDTO)
         {
-
             ApplicationUser applicationUser = new()
             {
                 UserName = registerDTO.UserName,
@@ -61,14 +60,15 @@ namespace TagerCom.Area.Identity.Controller
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
-
             // Generate email confirmation link
             var token = await userManager.GenerateEmailConfirmationTokenAsync(applicationUser);
             var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
             //var link = Url.Action("ConfirmEmail", "Accounts", new { Area = "Identity", token = token, UserId = applicationUser }, Request.Scheme);
-            var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ConfirmEmail?userId={applicationUser.Id}&token={encodedToken}";
-            await emailSender.SendEmailAsync(applicationUser.Email, "Confirm Your Email", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
-
+            var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ConfirmEmail?userId" +
+                $"={applicationUser.Id}&token={encodedToken}";
+            await emailSender.SendEmailAsync(applicationUser.Email, "Confirm Your Email", 
+                $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
+            //await userManager.AddToRoleAsync(applicationUser, "Customer");
             return Ok(new { SuccMsg = "User created successfully. Please confirm your email." });
         }
         #endregion
@@ -98,9 +98,9 @@ namespace TagerCom.Area.Identity.Controller
         {
             var user = await userManager.FindByEmailAsync(model.EmailOrUserName)
                        ?? await userManager.FindByNameAsync(model.EmailOrUserName);
+            if (!user.EmailConfirmed) return BadRequest(new {msg = "Please Confirem Your Email"});
             if (user == null || !await userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new { msg = "Invalid username or password" });
-            if (!user.EmailConfirmed) return BadRequest(new {msg = "Please Confirem Your Email"});
 
             //var oldTokens = await refreshToken.GetAsync(e=>e.UserId == user.Id);
             var oldToken = context.RefreshTokens.Where(e => e.UserId == user.Id);
@@ -189,7 +189,8 @@ namespace TagerCom.Area.Identity.Controller
             var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
             //var link = Url.Action("ConfirmEmail", "Accounts", new { Area = "Identity", token = token, UserId = applicationUser }, Request.Scheme);
             var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ConfirmEmail?userId={user.Id}&token={encodedToken}";
-            await emailSender.SendEmailAsync(user.Email!, "Confirm Your Email!", $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
+            await emailSender.SendEmailAsync(user.Email!, "Confirm Your Email!",
+                $"<h1>Confirm your email by clicking <a href='{link}'>Here</a></h1>");
 
             return Ok(new { msg = "Email confirmation link sent successfully." });
         }
@@ -222,7 +223,7 @@ namespace TagerCom.Area.Identity.Controller
 
             // ### Creat OTPs and Send it to the user email ------------------------------------------------------------------------------------
             var OTPNumber = new Random().Next(1000, 9999);
-            await userOTP.AddAsync(new()
+            await userOTP.CreateAsync(new()
             {
                 ApplicationUserId = user.Id,
                 OTPNumber = OTPNumber.ToString(),

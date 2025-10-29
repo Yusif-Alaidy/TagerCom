@@ -12,8 +12,8 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251026213416_add-defualt-profile")]
-    partial class adddefualtprofile
+    [Migration("20251027073342_InitialMigrat")]
+    partial class InitialMigrat
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -177,17 +177,14 @@ namespace TagerCom.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<string>("FirstName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -205,15 +202,6 @@ namespace TagerCom.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<string>("ProfileImgUrl")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("nvarchar(max)")
-                        .HasDefaultValue("default.jpg");
-
-                    b.Property<string>("SecondPhoneNumber")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -635,15 +623,15 @@ namespace TagerCom.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("City")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -654,16 +642,27 @@ namespace TagerCom.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Street")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId1")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ZipCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApplicationUserId");
+                    b.HasIndex("UserId1");
 
                     b.ToTable("UserAddress");
                 });
@@ -926,7 +925,7 @@ namespace TagerCom.Migrations
             modelBuilder.Entity("TagerCom.Models.RefreshToken", b =>
                 {
                     b.HasOne("TagerCom.Models.ApplicationUser", "User")
-                        .WithMany()
+                        .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -975,11 +974,13 @@ namespace TagerCom.Migrations
 
             modelBuilder.Entity("TagerCom.Models.UserAddress", b =>
                 {
-                    b.HasOne("TagerCom.Models.ApplicationUser", null)
-                        .WithMany("userAddresses")
-                        .HasForeignKey("ApplicationUserId")
+                    b.HasOne("TagerCom.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId1")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TagerCom.Models.UserOTP", b =>
@@ -1006,7 +1007,7 @@ namespace TagerCom.Migrations
 
             modelBuilder.Entity("TagerCom.Models.ApplicationUser", b =>
                 {
-                    b.Navigation("userAddresses");
+                    b.Navigation("RefreshTokens");
                 });
 
             modelBuilder.Entity("TagerCom.Models.Order", b =>
