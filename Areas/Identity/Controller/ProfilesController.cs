@@ -168,6 +168,7 @@ namespace TagerCom.Area.Identity.Controller
             // Save uploaded image to wwwroot/img --------------------------------------
             if (form.ProfileImgUrl is not null)
             {
+
                 var newFile = await SaveImageAsync(form.ProfileImgUrl);
                 if (!string.IsNullOrEmpty(user.ProfileImgUrl))
                 {
@@ -191,14 +192,14 @@ namespace TagerCom.Area.Identity.Controller
         #endregion
 
         #region Helper
-
-        // Save image in wwwroot/img folder ------------------------------------------------------
+        
+        // Save image in wwwroot/img folder -------------------------------------------------------
         private async Task<string> SaveImageAsync(IFormFile file)
         {
             var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img");
             Directory.CreateDirectory(folderPath);
 
-            // Security: Validate the file extension --------------------------------------------
+            // Security: Validate the file extension ---------------------------------------------
             var ext = Path.GetExtension(file.FileName);
             var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
             if (!allowed.Contains(ext.ToLowerInvariant()))

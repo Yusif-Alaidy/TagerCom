@@ -40,10 +40,9 @@ namespace TagerCom.Utility.DbInitializer
                 // -------------------------------------------------------
 
                 // Seed data for role --------------------------------------------------------
-                if (RoleManger.Roles == null)
+                if (!RoleManger.Roles.Any())
                 {
 
-                    RoleManger.CreateAsync(new("SuperAdmin")).GetAwaiter().GetResult();
                     RoleManger.CreateAsync(new("Admin")).GetAwaiter().GetResult();
                     RoleManger.CreateAsync(new("Vendor")).GetAwaiter().GetResult();
                     RoleManger.CreateAsync(new("Customer")).GetAwaiter().GetResult();
@@ -53,15 +52,15 @@ namespace TagerCom.Utility.DbInitializer
 
                     var result = UserManger.CreateAsync(new()
                     {
-                        UserName = "SuperAdmin",
-                        Email = "SuperAdmin@gmail.com",
+                        UserName = "Admin",
+                        Email = "Admin@gmail.com",
                         EmailConfirmed = true,
 
                     }, "Admin@123").GetAwaiter().GetResult();
-                    var user = UserManger.FindByEmailAsync("SuperAdmin@gmail.com").GetAwaiter().GetResult();
+                    var user = UserManger.FindByEmailAsync("Admin@gmail.com").GetAwaiter().GetResult();
                     user.EmailConfirmed = true;
                     if (user is not null)
-                        UserManger.AddToRoleAsync(user, "SuperAdmin").GetAwaiter().GetResult();
+                        UserManger.AddToRoleAsync(user, "Admin").GetAwaiter().GetResult();
                 }
             }
             catch (Exception ex)
