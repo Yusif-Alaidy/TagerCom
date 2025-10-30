@@ -276,7 +276,7 @@ namespace TagerCom.Area.Identity.Controller
 
         #endregion
 
-         #region NewPassword
+        #region NewPassword
         [HttpPost("NewPassword")]
         public async Task<IActionResult> NewPassword(NewPasswordDTO newPasswordDTO)
         {

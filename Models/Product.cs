@@ -16,7 +16,7 @@ namespace TagerCom.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
-        public Vendor Vendor { get; set; } = null!;
+        public Vendor? Vendor { get; set; }
         public Category? Category { get; set; }
     }
 }

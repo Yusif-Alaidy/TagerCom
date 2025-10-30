@@ -1,13 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<ItemGroup>
-	  <Compile Remove="Areas\**" />
-	  <Content Remove="Areas\**" />
-	  <EmbeddedResource Remove="Areas\**" />
-	  <None Remove="Areas\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<InternalsVisibleTo Include="TagerCom" />
 	</ItemGroup>
   <PropertyGroup>
