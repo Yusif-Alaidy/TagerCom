@@ -35,6 +35,7 @@ namespace TagerCom.DataAccess
         public DbSet<Vendor>            Vendor          { get; set; }
         public DbSet<Wallet>            Wallet          { get; set; }
 
+        public DbSet<SubCategory>     SubCategory       { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
