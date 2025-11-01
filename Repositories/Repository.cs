@@ -35,33 +35,34 @@ namespace TagerCom.Repositories
         {
             await _context.SaveChangesAsync();
         }
+        //Old Code
+        /*
+        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? expression = null,
+            Expression<Func<T, object>>[]? includes = null, bool tracked = true)
+        {
+            var entities = _db.AsQueryable();
 
-        //public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? expression = null,
-        //    Expression<Func<T, object>>[]? includes = null, bool tracked = true)
-        //{
-        //    var entities = _db.AsQueryable();
+            if (expression is not null)
+            {
+                entities = entities.Where(expression);
+            }
 
-        //    if (expression is not null)
-        //    {
-        //        entities = entities.Where(expression);
-        //    }
+            if (includes is not null)
+            {
+                foreach (var item in includes)
+                {
+                    entities = entities.Include(item);
+                }
+            }
 
-        //    if (includes is not null)
-        //    {
-        //        foreach (var item in includes)
-        //        {
-        //            entities = entities.Include(item);
-        //        }
-        //    }
+            if (!tracked)
+            {
+                entities = entities.AsNoTracking();
+            }
 
-        //    if (!tracked)
-        //    {
-        //        entities = entities.AsNoTracking();
-        //    }
-
-        //    return await entities.ToListAsync();
-        //}
-
+            return await entities.ToListAsync();
+        }
+        */
         public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? filter = null, Expression<Func<T, object>>[]? include = null, bool tracked = true)
         {
             var data = _db.AsQueryable();

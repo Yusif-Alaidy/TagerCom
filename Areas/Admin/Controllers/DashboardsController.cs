@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace TagerCom.Areas.Admin.Controllers
 {
     [Area("Admin")]
-    [Route("api/admin/[controller]")]
+    [Route("api/[Area]/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")]
     public class DashboardsController : ControllerBase
