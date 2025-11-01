@@ -21,5 +21,7 @@ namespace TagerCom.Repositories.IRepositories
         #region Create
         Task AddAsync(T entity);
         #endregion
+        public IQueryable<T> Query();
+        
     }
 }

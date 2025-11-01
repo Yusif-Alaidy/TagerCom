@@ -5,7 +5,7 @@ namespace TagerCom.Models
     public class Product
     {
         public int Id { get; set; }
-        public string VendorId { get; set; }
+        public Guid VendorId { get; set; }
         public int? CategoryId { get; set; }
         public int? SubCategoryId { get; set; } // ✅ Added SubCategoryId
 
@@ -16,6 +16,9 @@ namespace TagerCom.Models
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public int SalesCount { get; set; } = 0;
+
 
         // Navigation
         public Vendor? Vendor { get; set; }

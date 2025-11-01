@@ -47,7 +47,29 @@ namespace TagerCom.DataAccess
                 .HasOne(o => o.Vendor)
                 .WithMany()
                 .HasForeignKey(o => o.VendorId)
-                .OnDelete(DeleteBehavior.Restrict); // 👈 الحل هنا
+                .OnDelete(DeleteBehavior.Restrict); // 👈 الحل هنا  
+
+
+            // CartItem -> Product
+            builder.Entity<CartItem>()
+                .HasOne(ci => ci.Product)
+                .WithMany() // مفيش Navigation property في Product لـ CartItem
+                .HasForeignKey(ci => ci.ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // يمنع Multiple Cascade Paths
+
+            // CartItem -> Cart
+            builder.Entity<CartItem>()
+                .HasOne(ci => ci.Cart)
+                .WithMany(c => c.CartItems)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade); // مسموح لأنه مسار واحد فقط
+            
+            builder.Entity<Review>()
+                 .HasOne(r => r.Product)
+                      .WithMany()
+                        .HasForeignKey(r => r.ProductId)
+                           .OnDelete(DeleteBehavior.Restrict);
+
 
         }
 

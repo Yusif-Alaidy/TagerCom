@@ -94,5 +94,11 @@ namespace TagerCom.Repositories
         {
             _db.RemoveRange(entity);
         }
+
+        public IQueryable<T> Query()
+        {
+            return _db.AsQueryable();
+        }
+
     }
 }

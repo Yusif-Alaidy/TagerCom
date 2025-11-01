@@ -17,19 +17,24 @@ namespace TagerCom.Controllers
         private readonly IRepository<Product> productRepo;
         private readonly IRepository<Category> categoryRepo;
         private readonly IRepository<SubCategory> subCategoryRepo;
+        private readonly IRepository<Vendor> vendorRepo;
+
         #endregion
 
         #region === Constructor ===
         public ProductsController(
+
             UserManager<ApplicationUser> userManager,
             IRepository<Product> productRepo,
             IRepository<Category> categoryRepo,
-            IRepository<SubCategory> subCategoryRepo)
+            IRepository<SubCategory> subCategoryRepo, IRepository<Vendor> vendorRepo)
         {
             this.userManager = userManager;
             this.productRepo = productRepo;
             this.categoryRepo = categoryRepo;
             this.subCategoryRepo = subCategoryRepo;
+            this.vendorRepo = vendorRepo;
+
         }
         #endregion
 
@@ -39,19 +44,20 @@ namespace TagerCom.Controllers
         /// Allows an authenticated Vendor to create a new product.
         /// Validates category, subcategory, and image upload before saving.
         /// </summary>
+        
         [Authorize(Roles = "Vendor")]
         [HttpPost("CreateProduct")]
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDTO createProduct)
         {
-            #region === Validate Model State ===
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            #endregion
-
             #region === Get Current Vendor ===
-            var vendor = await userManager.GetUserAsync(User);
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "Unauthorized user" });
+
+            // Get vendor that belongs to this user
+            var vendor = await vendorRepo.GetOneAsync(v => v.ApplicationUserId == user.Id);
             if (vendor == null)
-                return Unauthorized(new { msg = "Unauthorized vendor" });
+                return BadRequest(new { message = "Vendor profile not found" });
             #endregion
 
             #region === Validate Category & SubCategory ===
@@ -80,7 +86,7 @@ namespace TagerCom.Controllers
             Directory.CreateDirectory(folderPath);
 
             // Generate unique file name and save the image
-            var fileName = Guid.NewGuid() + extension;
+            var fileName = $"{Guid.NewGuid()}{extension}";
             var filePath = Path.Combine(folderPath, fileName);
 
             await using (var stream = new FileStream(filePath, FileMode.Create))
@@ -89,15 +95,20 @@ namespace TagerCom.Controllers
             }
 
             // Build absolute image URL
-            string relativePath = $"images/products/{fileName}";
             string baseUrl = $"{Request.Scheme}://{Request.Host}/";
-            string imageUrl = baseUrl + relativePath;
+            string imageUrl = baseUrl + $"images/products/{fileName}";
             #endregion
 
             #region === Create Product Entity ===
             var product = createProduct.Adapt<Product>();
+
             product.ImageUrl = imageUrl;
-            product.VendorId = vendor.Id; // VendorId must match ApplicationUser Id type
+            product.CategoryId = category.Id;
+            product.SubCategoryId = subCategory.Id;
+
+            // ✅ تأكد إن VendorId بياخد Guid صح
+            product.VendorId = vendor.Id;
+
             product.CreatedAt = DateTime.UtcNow;
 
             await productRepo.AddAsync(product);
@@ -107,13 +118,13 @@ namespace TagerCom.Controllers
             #region === Prepare Response DTO ===
             var response = new ProductResponseDTO
             {
-                Id = product.Id,               // From newly created product
+                Id = product.Id,
                 Name = product.Name,
                 Price = product.Price,
                 ImageUrl = product.ImageUrl,
-                VendorName = vendor.UserName,
+                VendorName = user.UserName, // ✅ لأن Vendor.UserName مش موجود غالبًا
                 Description = product.Description,
-                VendorID = vendor.Id,
+                VendorID = vendor.Id
             };
             #endregion
 
@@ -126,6 +137,111 @@ namespace TagerCom.Controllers
             #endregion
         }
 
+
         #endregion
+
+        [Authorize(Roles = "Vendor")]
+        [HttpGet("MyProducts")]
+        public async Task<IActionResult> GetMyProducts(
+    int? categoryId = null,
+    int? subCategoryId = null,
+    string? search = null,
+    string? sortByPrice = null,
+    bool bestSeller = false,
+    int page = 1)
+        {
+            const int pageSize = 10;
+
+            #region === Get Current Vendor ===
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { msg = "Unauthorized user" });
+
+            // ✅ نجيب Vendor اللي بينتمي للمستخدم الحالي
+            var vendor = await vendorRepo.GetOneAsync(v => v.ApplicationUserId == user.Id);
+            if (vendor == null)
+                return BadRequest(new { msg = "Vendor profile not found" });
+            #endregion
+
+            #region === Base Query ===
+            var query = productRepo.Query()
+                .Include(p => p.Category)
+                .Include(p => p.SubCategory)
+                .Include(p => p.Vendor)
+                .Where(p => p.VendorId == vendor.Id) // ✅ نستخدم الـ Guid الخاص بالـ Vendor
+                .AsQueryable();
+            #endregion
+
+            #region === Apply Filters ===
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+
+            if (subCategoryId.HasValue)
+                query = query.Where(p => p.SubCategoryId == subCategoryId.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(p => p.Name.Contains(search));
+            #endregion
+
+            #region === Apply Sorting ===
+            if (bestSeller)
+                query = query.OrderByDescending(p => p.SalesCount);
+            else if (!string.IsNullOrEmpty(sortByPrice))
+            {
+                query = sortByPrice.ToLower() switch
+                {
+                    "asc" => query.OrderBy(p => p.Price),
+                    "desc" => query.OrderByDescending(p => p.Price),
+                    _ => query
+                };
+            }
+            #endregion
+
+            #region === Apply Pagination ===
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var products = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+            #endregion
+
+            #region === Map to DTO ===
+            var productDTOs = products.Select(p => new ProductResponseDTO
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Price = p.Price,
+                Description = p.Description,
+                ImageUrl = p.ImageUrl,
+                VendorName = user.UserName, // ✅ نستخدم اسم المستخدم من ApplicationUser
+                VendorID = vendor.Id
+            }).ToList();
+            #endregion
+
+            #region === Return Response ===
+            return Ok(new
+            {
+                msg = "Products retrieved successfully",
+                vendor = new
+                {
+                    vendorId = vendor.Id,
+                    username = user.UserName,
+                    companyName = vendor.CompanyName
+                },
+                pagination = new
+                {
+                    currentPage = page,
+                    totalPages,
+                    totalItems,
+                    pageSize
+                },
+                products = productDTOs
+            });
+            #endregion
+        }
+
+        
     }
 }

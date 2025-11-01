@@ -10,7 +10,7 @@
         public string ImageUrl { get; set; }
         public string VendorName { get; set; }
 
-        public string VendorID { get; set; }
+        public Guid VendorID { get; set; }
 
     }
 }

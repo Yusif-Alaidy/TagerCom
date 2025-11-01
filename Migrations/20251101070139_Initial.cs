@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TagerCom.Migrations
 {
     /// <inheritdoc />
-    public partial class initial : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -440,7 +440,7 @@ namespace TagerCom.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    VendorId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CategoryId = table.Column<int>(type: "int", nullable: true),
                     SubCategoryId = table.Column<int>(type: "int", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -450,7 +450,7 @@ namespace TagerCom.Migrations
                     ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    VendorId1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    SalesCount = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -466,10 +466,11 @@ namespace TagerCom.Migrations
                         principalTable: "SubCategory",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Product_Vendor_VendorId1",
-                        column: x => x.VendorId1,
+                        name: "FK_Product_Vendor_VendorId",
+                        column: x => x.VendorId,
                         principalTable: "Vendor",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -520,7 +521,7 @@ namespace TagerCom.Migrations
                         column: x => x.ProductId,
                         principalTable: "Product",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -572,7 +573,7 @@ namespace TagerCom.Migrations
                         column: x => x.ProductId,
                         principalTable: "Product",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -671,9 +672,9 @@ namespace TagerCom.Migrations
                 column: "SubCategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Product_VendorId1",
+                name: "IX_Product_VendorId",
                 table: "Product",
-                column: "VendorId1");
+                column: "VendorId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshToken_UserId",
