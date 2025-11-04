@@ -368,5 +368,53 @@ namespace TagerCom.Controllers
                 data = response
             });
         }
+        [Authorize(Roles = "Vendor")]
+        [HttpDelete("DeleteProduct/{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            #region === Get Current Vendor ===
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "Unauthorized user" });
+
+            var vendor = await vendorRepo.GetOneAsync(v => v.ApplicationUserId == user.Id);
+            if (vendor == null)
+                return BadRequest(new { message = "Vendor profile not found" });
+            #endregion
+
+            #region === Find Product ===
+            var product = await productRepo.GetOneAsync(p => p.Id == id && p.VendorId == vendor.Id);
+            if (product == null)
+                return NotFound(new { message = "Product not found or not owned by you" });
+            #endregion
+
+            #region === Delete Product Image ===
+            if (!string.IsNullOrEmpty(product.ImageUrl))
+            {
+                try
+                {
+                   
+                    var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", product.ImageUrl.Replace("/", "\\"));
+                    if (System.IO.File.Exists(imagePath))
+                        System.IO.File.Delete(imagePath);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting image: {ex.Message}");
+                }
+            }
+            #endregion
+
+            #region === Delete Product from Database ===
+            productRepo.Delete(product);
+            await productRepo.CommitAsync();
+            #endregion
+
+            return Ok(new
+            {
+                message = "Product deleted successfully",
+                deletedProductId = id
+            });
+        }
     }
     }
