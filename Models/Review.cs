@@ -10,6 +10,7 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
+        
         public Product Product { get; set; } = null!;
         public ApplicationUser Customer { get; set; } = null!;
     }
