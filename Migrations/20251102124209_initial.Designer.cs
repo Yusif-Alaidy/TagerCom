@@ -12,8 +12,8 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251101070139_Initial")]
-    partial class Initial
+    [Migration("20251102124209_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -537,14 +537,14 @@ namespace TagerCom.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CustomerId1")
+                    b.Property<string>("CustomerId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProductId1")
                         .HasColumnType("int");
 
                     b.Property<int>("Rating")
@@ -552,9 +552,11 @@ namespace TagerCom.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerId1");
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductId1");
 
                     b.ToTable("Review");
                 });
@@ -966,7 +968,7 @@ namespace TagerCom.Migrations
                 {
                     b.HasOne("TagerCom.Models.ApplicationUser", "Customer")
                         .WithMany()
-                        .HasForeignKey("CustomerId1")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -975,6 +977,10 @@ namespace TagerCom.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("TagerCom.Models.Product", null)
+                        .WithMany("Reviews")
+                        .HasForeignKey("ProductId1");
 
                     b.Navigation("Customer");
 
@@ -1069,6 +1075,11 @@ namespace TagerCom.Migrations
             modelBuilder.Entity("TagerCom.Models.Order", b =>
                 {
                     b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("TagerCom.Models.Product", b =>
+                {
+                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("TagerCom.Models.SubCategory", b =>

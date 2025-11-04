@@ -44,7 +44,7 @@ namespace TagerCom.Controllers
         /// Allows an authenticated Vendor to create a new product.
         /// Validates category, subcategory, and image upload before saving.
         /// </summary>
-        
+
         [Authorize(Roles = "Vendor")]
         [HttpPost("CreateProduct")]
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDTO createProduct)
@@ -101,6 +101,8 @@ namespace TagerCom.Controllers
 
             #region === Create Product Entity ===
             var product = createProduct.Adapt<Product>();
+            
+
 
             product.ImageUrl = imageUrl;
             product.CategoryId = category.Id;
@@ -121,10 +123,10 @@ namespace TagerCom.Controllers
                 Id = product.Id,
                 Name = product.Name,
                 Price = product.Price,
-                ImageUrl = product.ImageUrl,
-                VendorName = user.UserName, // ✅ لأن Vendor.UserName مش موجود غالبًا
+                //product.img
+                ImageUrl = $"{Request.Scheme}://{Request.Host}/{product.ImageUrl}",
+                
                 Description = product.Description,
-                VendorID = vendor.Id
             };
             #endregion
 
@@ -132,7 +134,9 @@ namespace TagerCom.Controllers
             return Ok(new
             {
                 msg = "Product created successfully",
-                product = response
+                product = response,
+                VendorID = vendor.Id,
+                vendorName = user.UserName,
             });
             #endregion
         }
@@ -142,13 +146,10 @@ namespace TagerCom.Controllers
 
         [Authorize(Roles = "Vendor")]
         [HttpGet("MyProducts")]
-        public async Task<IActionResult> GetMyProducts(
-    int? categoryId = null,
-    int? subCategoryId = null,
-    string? search = null,
-    string? sortByPrice = null,
-    bool bestSeller = false,
-    int page = 1)
+        public async Task<IActionResult> GetMyProducts(int? categoryId = null, int? subCategoryId = null, string? search = null,
+                string? sortByPrice = null, bool bestSeller = false, int page = 1)
+
+
         {
             const int pageSize = 10;
 
@@ -242,6 +243,130 @@ namespace TagerCom.Controllers
             #endregion
         }
 
-        
+        [Authorize(Roles = "Vendor")]
+
+        [HttpGet("MyProduct/{id}")]
+        public async Task<IActionResult> GetMyProduct(int id)
+        {
+            // Get current vendor
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { msg = "Unauthorized user" });
+
+            var vendor = await vendorRepo.GetOneAsync(v => v.ApplicationUserId == user.Id);
+            if (vendor == null)
+                return BadRequest(new { msg = "Vendor profile not found" });
+
+            // Get product that belongs to this vendor
+            var product = await productRepo.GetOneAsync(
+                  p => p.Id == id && p.VendorId == vendor.Id,
+                           include: [p => p.Reviews]);
+
+
+
+            if (product == null)
+                return NotFound(new { message = "Product not found or does not belong to you" });
+
+            // Convert to DTO
+            var productDto = new ProductDetailDTO
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                ImageUrl = product.ImageUrl,
+                Reviews = product.Reviews.Select(r => new ReviewDTO
+                {
+                    Comment = r.Comment
+                }).ToList()
+            };
+
+            return Ok(productDto);
+        }
+
+        [Authorize(Roles = "Vendor")]
+        [HttpPut("UpdateProduct/{id}")]
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] UpdateProductDTO dto)
+        {
+            // ✅ الحصول على الـ Vendor الحالي
+            var user = await userManager.GetUserAsync(base.User);
+            if (user == null)
+                return Unauthorized(new { message = "Unauthorized vendor" });
+
+            var vendor = await vendorRepo.GetOneAsync(v => v.ApplicationUserId == user.Id);
+            if (vendor == null)
+                return BadRequest(new { message = "Vendor profile not found" });
+
+            // ✅ التأكد إن المنتج موجود ويتبع نفس الفيندور
+            var product = await productRepo.GetOneAsync(p => p.Id == id && p.VendorId == vendor.Id);
+            if (product == null)
+                return NotFound(new { message = "Product not found or not owned by you" });
+
+            // ✅ التحقق من Category و SubCategory
+            var category = await categoryRepo.GetOneAsync(c => c.Id == dto.CategoryId);
+            if (category == null)
+                return BadRequest(new { message = "Invalid category" });
+
+            var subCategory = await subCategoryRepo.GetOneAsync(s => s.Id == dto.SubCategoryId);
+            if (subCategory == null)
+                return BadRequest(new { message = "Invalid subcategory" });
+
+            // ✅ تحديث الحقول
+            product.Name = dto.Name;
+            product.Description = dto.Description;
+            product.Price = dto.Price;
+            product.Stock = dto.Stock;
+            product.CategoryId = dto.CategoryId;
+            product.SubCategoryId = dto.SubCategoryId;
+
+            // ✅ التعامل مع الصورة الجديدة
+            if (dto.Image != null && dto.Image.Length > 0)
+            {
+                var rootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "products");
+                if (!Directory.Exists(rootPath))
+                    Directory.CreateDirectory(rootPath);
+
+                // حذف الصورة القديمة
+                if (!string.IsNullOrEmpty(product.ImageUrl))
+                {
+                    var oldImagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", product.ImageUrl);
+                    if (System.IO.File.Exists(oldImagePath))
+                        System.IO.File.Delete(oldImagePath);
+                }
+
+                // رفع الصورة الجديدة
+                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(dto.Image.FileName)}";
+                var filePath = Path.Combine(rootPath, uniqueFileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.Image.CopyToAsync(stream);
+                }
+
+                // المسار النسبي
+                product.ImageUrl = Path.Combine("images", "products", uniqueFileName).Replace("\\", "/");
+            }
+
+            // ✅ حفظ التعديلات
+            productRepo.Update(product);
+            await productRepo.CommitAsync();
+
+            // ✅ استخدام DTO للـ response
+            var response = new ProductUpdateResponseDTO
+            {
+                ProductId = product.Id,
+                ProductName = product.Name,
+                Price = product.Price,
+                Stock = product.Stock,
+                ImageUrl = product.ImageUrl,
+                VendorId = user.Id,
+                VendorName = user.UserName
+            };
+
+            return Ok(new
+            {
+                message = "Product updated successfully",
+                data = response
+            });
+        }
     }
-}
+    }

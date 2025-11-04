@@ -8,9 +8,9 @@
         public string Description { get; set; } = null!;
 
         public string ImageUrl { get; set; }
-        public string VendorName { get; set; }
+        public string? VendorName { get; set; }
 
-        public Guid VendorID { get; set; }
+        public Guid? VendorID { get; set; }
 
     }
 }

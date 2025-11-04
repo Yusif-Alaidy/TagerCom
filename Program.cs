@@ -91,6 +91,9 @@ namespace TagerCom
                 });
             }
 
+
+
+
             app.UseHttpsRedirection();
 
             app.UseRouting();

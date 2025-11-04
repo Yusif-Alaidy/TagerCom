@@ -71,6 +71,20 @@ namespace TagerCom.DataAccess
                            .OnDelete(DeleteBehavior.Restrict);
 
 
+            builder.Entity<Review>()
+        .HasOne(r => r.Product)
+        .WithMany(p => p.Reviews)
+        .HasForeignKey(r => r.ProductId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+            // العلاقة بين Review و Customer (ApplicationUser)
+            builder.Entity<Review>()
+                .HasOne(r => r.Customer)
+                .WithMany() // مفيش ICollection<Review> داخل ApplicationUser
+                .HasForeignKey(r => r.CustomerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

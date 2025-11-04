@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TagerCom.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -553,18 +553,18 @@ namespace TagerCom.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductId = table.Column<int>(type: "int", nullable: false),
-                    CustomerId = table.Column<int>(type: "int", nullable: false),
+                    CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Rating = table.Column<int>(type: "int", nullable: false),
                     Comment = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CustomerId1 = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    ProductId1 = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Review", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Review_AspNetUsers_CustomerId1",
-                        column: x => x.CustomerId1,
+                        name: "FK_Review_AspNetUsers_CustomerId",
+                        column: x => x.CustomerId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -574,6 +574,11 @@ namespace TagerCom.Migrations
                         principalTable: "Product",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Review_Product_ProductId1",
+                        column: x => x.ProductId1,
+                        principalTable: "Product",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -682,14 +687,19 @@ namespace TagerCom.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Review_CustomerId1",
+                name: "IX_Review_CustomerId",
                 table: "Review",
-                column: "CustomerId1");
+                column: "CustomerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Review_ProductId",
                 table: "Review",
                 column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Review_ProductId1",
+                table: "Review",
+                column: "ProductId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_SubCategory_CategoryId",

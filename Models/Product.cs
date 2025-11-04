@@ -21,6 +21,7 @@ namespace TagerCom.Models
 
 
         // Navigation
+        public ICollection<Review>? Reviews { get; set; }
         public Vendor? Vendor { get; set; }
         public Category? Category { get; set; }
         public SubCategory? SubCategory { get; set; } // ✅ Navigation property

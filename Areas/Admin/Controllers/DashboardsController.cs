@@ -106,7 +106,7 @@ namespace TagerCom.Areas.Admin.Controllers
         {
 
             // Get spcific pending vendor --------------------------
-            var pendingVendor = await Vendor.GetOneAsync(e=>e.Id == request.VendorId,includes:[e=>e.ApplicationUser]);
+            var pendingVendor = await Vendor.GetOneAsync(e=>e.Id == request.VendorId, include: [e=>e.ApplicationUser]);
             if (pendingVendor == null)
                 return NotFound(new {msg = "this store is not found"});
             //------------------------------------------------------

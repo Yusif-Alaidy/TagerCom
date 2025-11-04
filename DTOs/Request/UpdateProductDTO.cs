@@ -2,8 +2,10 @@
 
 namespace TagerCom.DTOs.Request
 {
-    public class CreateProductDTO
+    public class UpdateProductDTO
     {
+      
+
         [Required]
         public string Name { get; set; } = null!;
 
@@ -11,19 +13,19 @@ namespace TagerCom.DTOs.Request
         public string Description { get; set; } = null!;
 
         [Required]
-        [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
+        [Range(0.1, double.MaxValue)]
         public decimal Price { get; set; }
 
         [Required]
-        [Range(0, int.MaxValue, ErrorMessage = "Stock cannot be negative")]
+        [Range(1, int.MaxValue)]
         public int Stock { get; set; }
 
         [Required]
         public int CategoryId { get; set; }
 
-        public int? SubCategoryId { get; set; }
-
         [Required]
-        public IFormFile MainImg { get; set; } = null!;
+        public int SubCategoryId { get; set; }
+
+        public IFormFile? Image { get; set; } // Optional
     }
 }
