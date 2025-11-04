@@ -21,8 +21,8 @@ namespace TagerCom
             {
                 option.Password.RequiredLength = 8;      // Minimum password length
                 option.User.RequireUniqueEmail = true;   // Require unique email per user
-            }).AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+            }).AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
+
             builder.Services.ConfigureApplicationCookie(options =>
             {
                 options.LoginPath = "/api/Identity/Accounts/Login";
