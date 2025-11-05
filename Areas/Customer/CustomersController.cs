@@ -57,7 +57,7 @@ namespace TagerCom.Areas.Customer
         [HttpPost("AddToFavorites")]
         public async Task<IActionResult> AddToFavorites([FromBody] AddFavoriteRequestDTO addFavorite)
         {
-            //var userId = "c2744f14-ac46-42b5-b205-1006910e12fb"; // ضع هنا Id حقيقي لمستخدم Customer
+            //var userId = "c2744f14-ac46-42b5-b205-1006910e12fb"; // Hardcoded Customer test by id
             //var productExist = _favoriteRepository.Query()
             //.Any(f => f.ApplicationUserId == userId && f.ProductId == addFavorite.ProductId);
 
@@ -124,28 +124,25 @@ namespace TagerCom.Areas.Customer
             //    return BadRequest(new { msg = "Your profile is not complete" });
             //}
 
-            // تحقق من وجود المنتج
+            //  Checking Product
             var product = await _productRepo.GetAsync(p => p.Id == request.ProductId);
             if (product == null)
                 return NotFound(new { msg = "Product not found" });
 
-            // تحقق من وجوده مسبقًا في wishlist
-            // تأكد إن user موجود
-            if (user == null)
+                    if (user == null)
                 return BadRequest(new { msg = "User not found" });
 
-            // تأكد إن request صالح
+            //  Checking request 
             if (request == null || request.ProductId <= 0)
                 return BadRequest(new { msg = "Invalid product" });
-
-            // تحقق إذا المنتج موجود بالفعل في الـ wishlist
+              // Checking of the wishlist is already exists
             var exists = await _wishlistRepository.Query()
                 .FirstOrDefaultAsync(w => w.ApplicationUserId == user.Id && w.ProductId == request.ProductId);
 
             if (exists != null)
                 return BadRequest(new { msg = "Product already in Wishlist" });
 
-            // إنشاء عنصر جديد للـ wishlist
+            // making a new wishlist
             var wishlistItem = new Wishlist
             {
                 ApplicationUserId = user.Id,
@@ -153,7 +150,7 @@ namespace TagerCom.Areas.Customer
                 CreatedAt = DateTime.UtcNow
             };
 
-            // أضف العنصر واحفظه فعليًا في قاعدة البيانات
+            // Saving wishlist
             await _wishlistRepository.AddAsync(wishlistItem);
             await _wishlistRepository.CommitAsync(); // تأكد إن CommitAsync فعليًا يعمل SaveChangesAsync
 
@@ -171,7 +168,7 @@ namespace TagerCom.Areas.Customer
             if (user == null)
                 return Unauthorized(new { msg = "User not found" });
 
-            // ✅ نجيب wishlist الخاصة بالمستخدم ومعاها بيانات المنتج باستخدام include expression
+            // include expression can handle null without null references error
             var wishlist = await _wishlistRepository.GetAsync(
                 expression: w => w.ApplicationUserId == user.Id,
                 includes: new Expression<Func<Wishlist, object>>[] { w => w.Product }
@@ -180,7 +177,7 @@ namespace TagerCom.Areas.Customer
             if (wishlist == null || !wishlist.Any())
                 return Ok(new { msg = "Your wishlist is empty" });
 
-            // ✅ نحولها إلى DTO
+            // transfer the wishlist to DTO
             var wishlistDto = wishlist.Select(w => new WishlistItemDTO
             {
                 Id = w.Id,
