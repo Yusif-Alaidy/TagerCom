@@ -2,8 +2,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using TagerCom.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+using TagerCom.Models;
 namespace TagerCom.Areas.Customer
 {
     [Route("api/Customer/[controller]")]
@@ -14,14 +15,18 @@ namespace TagerCom.Areas.Customer
         private readonly IRepository<Favorite> _favoriteRepository;
         private readonly IRepository<Product> _productRepo;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IRepository<Wishlist> _wishlistRepository;
+        private readonly IRepository<UserAddress> _userAddress;
 
 
         public CustomersController(IRepository<Favorite> favoriteRepo,
-            IRepository<Product> productRepo, UserManager<ApplicationUser> userManager)
+            IRepository<Product> productRepo, UserManager<ApplicationUser> userManager, IRepository<Wishlist> wishlistRepository)
         {
             _favoriteRepository=favoriteRepo;
             _productRepo=productRepo;
             _userManager=userManager;
+            _wishlistRepository=wishlistRepository;
+
         }
 
 
@@ -103,6 +108,93 @@ namespace TagerCom.Areas.Customer
             return Ok(new { message = "Product removed from favorites successfully." });
         }
 
+
+        #region Add to Wishlist
+        [Authorize(Roles = "Customer")]
+        [HttpPost("AddMyWishlist")]
+        public async Task<IActionResult> AddToWishlist(WishlistRequest request)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { msg = "User not found" });
+
+            //var address = await _userAddress.GetAsync(e => e.ApplicationUserId == user.Id);
+            //if (string.IsNullOrEmpty(user.PhoneNumber) || string.IsNullOrEmpty(user.FirstName) || address == null)
+            //{
+            //    return BadRequest(new { msg = "Your profile is not complete" });
+            //}
+
+            // تحقق من وجود المنتج
+            var product = await _productRepo.GetAsync(p => p.Id == request.ProductId);
+            if (product == null)
+                return NotFound(new { msg = "Product not found" });
+
+            // تحقق من وجوده مسبقًا في wishlist
+            // تأكد إن user موجود
+            if (user == null)
+                return BadRequest(new { msg = "User not found" });
+
+            // تأكد إن request صالح
+            if (request == null || request.ProductId <= 0)
+                return BadRequest(new { msg = "Invalid product" });
+
+            // تحقق إذا المنتج موجود بالفعل في الـ wishlist
+            var exists = await _wishlistRepository.Query()
+                .FirstOrDefaultAsync(w => w.ApplicationUserId == user.Id && w.ProductId == request.ProductId);
+
+            if (exists != null)
+                return BadRequest(new { msg = "Product already in Wishlist" });
+
+            // إنشاء عنصر جديد للـ wishlist
+            var wishlistItem = new Wishlist
+            {
+                ApplicationUserId = user.Id,
+                ProductId = request.ProductId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // أضف العنصر واحفظه فعليًا في قاعدة البيانات
+            await _wishlistRepository.AddAsync(wishlistItem);
+            await _wishlistRepository.CommitAsync(); // تأكد إن CommitAsync فعليًا يعمل SaveChangesAsync
+
+            return Ok(new { msg = "Product added to Wishlist" });
+        }
+        #endregion
+
+
+        #region Get Wishlist
+        [Authorize(Roles = "Customer")]
+        [HttpGet("GetMyWishlist")]
+        public async Task<ActionResult<List<WishlistItemDTO>>> GetWishlist()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { msg = "User not found" });
+
+            // ✅ نجيب wishlist الخاصة بالمستخدم ومعاها بيانات المنتج باستخدام include expression
+            var wishlist = await _wishlistRepository.GetAsync(
+                expression: w => w.ApplicationUserId == user.Id,
+                includes: new Expression<Func<Wishlist, object>>[] { w => w.Product }
+            );
+
+            if (wishlist == null || !wishlist.Any())
+                return Ok(new { msg = "Your wishlist is empty" });
+
+            // ✅ نحولها إلى DTO
+            var wishlistDto = wishlist.Select(w => new WishlistItemDTO
+            {
+                Id = w.Id,
+                ProductId = w.ProductId,
+                ProductName = w.Product?.Name,
+                ProductImage = w.Product?.ImageUrl,
+                ProductPrice = w.Product?.Price ?? 0,
+                ProductDescription = w.Product?.Description,
+                CreatedAt = w.CreatedAt
+            }).ToList();
+
+            return Ok(wishlistDto);
+        }
+        #endregion
 
 
     }
