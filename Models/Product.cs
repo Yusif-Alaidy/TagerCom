@@ -5,7 +5,7 @@ namespace TagerCom.Models
     public class Product
     {
         public int Id { get; set; }
-        public int VendorId { get; set; }
+        public Guid VendorId { get; set; }
         public int? CategoryId { get; set; }
         public string Name { get; set; } = null!;
         public string Description { get; set; } = null!;
@@ -18,5 +18,8 @@ namespace TagerCom.Models
         // Navigation
         public Vendor? Vendor { get; set; }
         public Category? Category { get; set; }
+
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
+
     }
 }

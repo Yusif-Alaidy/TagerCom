@@ -12,8 +12,8 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251104101335_AddFavoritesAndWishlist")]
-    partial class AddFavoritesAndWishlist
+    [Migration("20251104222350_FixReviewCascade")]
+    partial class FixReviewCascade
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -502,17 +502,14 @@ namespace TagerCom.Migrations
                     b.Property<int>("Stock")
                         .HasColumnType("int");
 
-                    b.Property<int>("VendorId")
-                        .HasColumnType("int");
-
-                    b.Property<Guid?>("VendorId1")
+                    b.Property<Guid>("VendorId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("VendorId1");
+                    b.HasIndex("VendorId");
 
                     b.ToTable("Product");
                 });
@@ -879,13 +876,13 @@ namespace TagerCom.Migrations
                     b.HasOne("TagerCom.Models.Cart", "Cart")
                         .WithMany()
                         .HasForeignKey("CartId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TagerCom.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Cart");
@@ -981,7 +978,9 @@ namespace TagerCom.Migrations
 
                     b.HasOne("TagerCom.Models.Vendor", "Vendor")
                         .WithMany("Products")
-                        .HasForeignKey("VendorId1");
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Category");
 
@@ -1008,9 +1007,9 @@ namespace TagerCom.Migrations
                         .IsRequired();
 
                     b.HasOne("TagerCom.Models.Product", "Product")
-                        .WithMany()
+                        .WithMany("Reviews")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Customer");
@@ -1109,6 +1108,11 @@ namespace TagerCom.Migrations
             modelBuilder.Entity("TagerCom.Models.Order", b =>
                 {
                     b.Navigation("Payment");
+                });
+
+            modelBuilder.Entity("TagerCom.Models.Product", b =>
+                {
+                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("TagerCom.Models.Vendor", b =>

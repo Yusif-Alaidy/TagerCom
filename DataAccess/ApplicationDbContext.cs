@@ -43,6 +43,12 @@ namespace TagerCom.DataAccess
             base.OnModelCreating(builder);
             ConfigureProfile(builder);
 
+            builder.Entity<Review>()
+             .HasOne(r => r.Product)
+              .WithMany(p => p.Reviews)
+                .HasForeignKey(r => r.ProductId)
+                 .OnDelete(DeleteBehavior.Restrict);  // بدلاً من Cascade
+                                          // أو Restrict
 
             builder.Entity<Order>()
                 .HasOne(o => o.Vendor)
@@ -67,13 +73,25 @@ namespace TagerCom.DataAccess
              .HasOne(w => w.User)
              .WithMany()
              .HasForeignKey(w => w.ApplicationUserId)
-             .OnDelete(DeleteBehavior.Cascade);  // حذف المستخدم يمسح كل Wishlists
+              .OnDelete(DeleteBehavior.Cascade);  // حذف المستخدم يمسح كل Wishlists
 
             builder.Entity<Wishlist>()
                 .HasOne(w => w.Product)
                 .WithMany()
                 .HasForeignKey(w => w.ProductId)
                 .OnDelete(DeleteBehavior.NoAction); // حذف المنتج لا يمسح Wishlists تلقائيًا
+
+            builder.Entity<CartItem>()
+                .HasOne(ci => ci.Product)
+                .WithMany()
+                .HasForeignKey(ci => ci.ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // أو NoAction في EF Core 5+
+
+            builder.Entity<CartItem>()
+                .HasOne(ci => ci.Cart)
+                .WithMany()
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

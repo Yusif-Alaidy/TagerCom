@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TagerCom.Models;
-
+using Microsoft.EntityFrameworkCore;
 namespace TagerCom.Areas.Customer
 {
     [Route("api/Customer/[controller]")]
@@ -24,8 +24,9 @@ namespace TagerCom.Areas.Customer
             _userManager=userManager;
         }
 
-        [Authorize(Roles ="Customer")]
-        [HttpGet]
+
+        [Authorize(Roles = "Customer")]
+        [HttpGet("GetMyFavorites")]
         public async Task <IActionResult>GetMyFavorites()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -47,21 +48,28 @@ namespace TagerCom.Areas.Customer
 
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddToFavorites([FromBody]AddFavoriteRequestDTO addFavorite)
-
-
+        [Authorize(Roles = "Customer")]
+        [HttpPost("AddToFavorites")]
+        public async Task<IActionResult> AddToFavorites([FromBody] AddFavoriteRequestDTO addFavorite)
         {
+            //var userId = "c2744f14-ac46-42b5-b205-1006910e12fb"; // ضع هنا Id حقيقي لمستخدم Customer
+            //var productExist = _favoriteRepository.Query()
+            //.Any(f => f.ApplicationUserId == userId && f.ProductId == addFavorite.ProductId);
+
             var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "You must be logged in as Customer." });
 
-            var productexist = _favoriteRepository.Query().
-                Any(f => f.ApplicationUserId == user.Id && f.ProductId == addFavorite.ProductId);
+            var productExist = _favoriteRepository.Query()
+                .Any(f => f.ApplicationUserId == user.Id && f.ProductId == addFavorite.ProductId);
 
-            if (productexist)
+            if (productExist)
                 return Conflict(new { message = "Product is already in Your favorites." });
 
-            var addingproduct = _productRepo.GetOneAsync(p => p.Id == addFavorite.ProductId);
-            if (addingproduct == null)
+            var addingProduct = await _productRepo.Query()
+                .FirstOrDefaultAsync(p => p.Id == addFavorite.ProductId);
+
+            if (addingProduct == null)
                 return NotFound(new { message = "Product not found." });
 
             var favorite = new Favorite
@@ -70,18 +78,15 @@ namespace TagerCom.Areas.Customer
                 ProductId = addFavorite.ProductId,
                 CreatedAt = DateTime.UtcNow
             };
-            
+
             await _favoriteRepository.AddAsync(favorite);
             await _favoriteRepository.CommitAsync();
 
             return Ok(new { message = "Product added to Your favorites successfully." });
-
-
-
         }
 
-
-        [HttpDelete("{productId:int}")]
+        [Authorize(Roles = "Customer")]
+        [HttpDelete("RemoveFromFavorites/{productId:int}")]
         public async Task<IActionResult> RemoveFromFavorites(int productId)
         {
             var user = await _userManager.GetUserAsync(User);

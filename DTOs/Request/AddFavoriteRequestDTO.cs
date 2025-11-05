@@ -1,4 +1,4 @@
-﻿namespace TagerCom.DTOs.Response
+﻿namespace TagerCom.DTOs.Request
 {
     public class AddFavoriteRequestDTO
     {
