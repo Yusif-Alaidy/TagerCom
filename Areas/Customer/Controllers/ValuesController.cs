@@ -70,8 +70,8 @@ namespace TagerCom.Areas.Customer.Controllers
 
             // Pagination ----------------------------------------------
             var totalNumberOfPages = Math.Ceiling(Products.Count() / 2.0);
-            var currentPage = request.Page;
-            Products = Products.Skip(( request.Page - 1 ) * 2).Take(2).ToList();
+            var currentPage = request.currentPage;
+            Products = Products.Skip(( request.currentPage - 1 ) * 2).Take(2).ToList();
             // ---------------------------------------------------------
 
             // Mapping -------------------------------------------------
