@@ -110,36 +110,43 @@ namespace TagerCom.Areas.Customer.Controllers
         public async Task<IActionResult> GetOne(int id)
         {
             // Get the Product ---------------------------
-            var Product = await ProductRepo.GetOneAsync(e => e.Id == id);
+            var Product = await ProductRepo.GetOneAsync(e => e.Id == id, includes:[e=> e.Reviews]);
             if(Product == null)
                 return NotFound();
             // -------------------------------------------
 
             // Get all reviews for this product ----------
-            var Reviews = await ReviewRepo.GetAsync(e => e.Product.Id == id);
+            var Reviews = await ReviewRepo.GetAsync(e => e.Product.Id == Product.Id);
             // -------------------------------------------
 
             // Mapping -----------------------------------
             var ProductDto = new ProductsRespons
             {
-                Id = Product.Id,
-                Name = Product.Name,
-                VendorId = Product.VendorId,
-                CategoryId = Product.CategoryId,
+                Id          = Product.Id,
+                Name        = Product.Name,
+                VendorId    = Product.VendorId,
+                CategoryId  = Product.CategoryId,
                 Description = Product.Description,
-                Price = Product.Price,
-                Stock = Product.Stock,
-                ImageUrl = Product.ImageUrl,
-                IsActive = Product.IsActive,
-                CreatedAt = Product.CreatedAt
+                Price       = Product.Price,
+                Stock       = Product.Stock,
+                ImageUrl    = Product.ImageUrl,
+                IsActive    = Product.IsActive,
+                CreatedAt   = Product.CreatedAt
             };
 
+            var ReviewDTO = Reviews.Select(e => new Review
+            {
+                Id = e.Id,
+                Rating = e.Rating,
+                Comment = e.Comment,
+                CreatedAt = e.CreatedAt,
+            });
             // -------------------------------------------
 
             return Ok(new
             {
                 Products = ProductDto,
-                Reviews = Reviews,
+                Reviews = ReviewDTO,
             });
         }
         #endregion
