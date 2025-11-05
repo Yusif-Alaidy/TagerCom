@@ -14,11 +14,11 @@
 
         // sorting ------------------------------------------
         public string? SortBy {get; set;} // Price - Date - Rate
-        public bool? OrderByDescending {get; set;}
+        public bool? descending { get; set;}
         // --------------------------------------------------
 
         // Paggination --------------------------------------
-        public int Page { get; set; } = 1;
+        public int currentPage { get; set; } = 1;
         // --------------------------------------------------
     }
 }
