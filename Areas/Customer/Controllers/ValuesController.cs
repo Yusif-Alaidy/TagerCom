@@ -7,8 +7,9 @@ using TagerCom.Models;
 
 namespace TagerCom.Areas.Customer.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/customer/[controller]")]
     [ApiController]
+    [Area("Customer")]
     public class ValuesController : ControllerBase
     {
         #region Fields
@@ -36,7 +37,7 @@ namespace TagerCom.Areas.Customer.Controllers
 
             // Search with name and description ------------------------
             if (request.Search is not null)
-                Products = await ProductRepo.GetAsync(e => e.Name.Contains(request.Search) && e.Description.Contains(request.Search));
+                Products = await ProductRepo.GetAsync(e => e.Name.Contains(request.Search) || e.Description.Contains(request.Search) && e.Stock >= 1 && e.IsActive == true);
             // ---------------------------------------------------------
 
             // Filter --------------------------------------------------
@@ -45,20 +46,20 @@ namespace TagerCom.Areas.Customer.Controllers
             if (request.MinPrice.HasValue)
                 Products = await ProductRepo.GetAsync(e => e.Price >= request.MinPrice);
             if (request.MaxPrice.HasValue)
-                Products = await ProductRepo.GetAsync(e => e.Price >= request.MinPrice);
+                Products = await ProductRepo.GetAsync(e => e.Price <= request.MaxPrice);
             // ---------------------------------------------------------
 
             // Sorting -------------------------------------------------
             switch (request.SortBy?.ToLower())
             {
                 case "price":
-                    Products = request.OrderByDescending == true ? Products.OrderByDescending(e => e.Price).ToList() : Products.OrderBy(e => e.Price).ToList();
+                    Products = request.descending == true ? Products.OrderByDescending(e => e.Price).ToList() : Products.OrderBy(e => e.Price).ToList();
                     break;
                 case "date":
-                    Products = request.OrderByDescending == true ? Products.OrderByDescending(e => e.CreatedAt).ToList() : Products.OrderBy(e => e.CreatedAt).ToList();
+                    Products = request.descending == true ? Products.OrderByDescending(e => e.CreatedAt).ToList() : Products.OrderBy(e => e.CreatedAt).ToList();
                     break;
                 case "rate":
-                    Products = request.OrderByDescending == true ? Products.OrderByDescending(e => e.Rate).ToList() : Products.OrderBy(e => e.Rate).ToList();
+                    Products = request.descending == true ? Products.OrderByDescending(e => e.Rate).ToList() : Products.OrderBy(e => e.Rate).ToList();
                     break;
                 default:
                     // Default sorting: Newest first
@@ -68,9 +69,9 @@ namespace TagerCom.Areas.Customer.Controllers
             // ---------------------------------------------------------
 
             // Pagination ----------------------------------------------
-            var totalNumberOfPages = Math.Ceiling(Products.Count() / 10.0);
+            var totalNumberOfPages = Math.Ceiling(Products.Count() / 2.0);
             var currentPage = request.Page;
-            Products = Products.Skip(( request.Page - 1 ) * 10).Take(10).ToList();
+            Products = Products.Skip(( request.Page - 1 ) * 2).Take(2).ToList();
             // ---------------------------------------------------------
 
             // Mapping -------------------------------------------------
@@ -98,8 +99,8 @@ namespace TagerCom.Areas.Customer.Controllers
                 MaxPrice = request.MaxPrice,
                 MinPrice = request.MinPrice,
                 Category = request.Category,
-                SortingBy = request.SortBy,
-                Descending = request.OrderByDescending
+                SortBy = request.SortBy,
+                Descending = request.descending
             });
         }
         #endregion
