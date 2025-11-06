@@ -189,18 +189,56 @@ namespace TagerCom.Areas.Customer.Controllers
 
         #endregion
 
-        #region Get Best Selling
+        #region Get Best Sellers
 
-        [HttpGet("best-selling")]
-        public async Task<IActionResult> GetBestSelling() 
+        [HttpGet("bestsellers")]
+        public async Task<IActionResult> GetBestsellers() 
         {
-            var AllProducts = await ProductRepo.GetAsync();
+            // Get All Products -------------------------------------------------------
+            var AllProducts = await ProductRepo.GetAsync(includes:[e=>e.OrderItems]);
             if (AllProducts == null)
                 return NotFound(new { msg = "There are no products"});
+            // ------------------------------------------------------------------------
 
-            var Products = AllProducts.Select(p => new { TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0 }).OrderByDescending(p => p.TotalSold).Take(10).ToList();
+            // Get Best Sellers -------------------------------------------------------
+            var Products = AllProducts
+                .Select(p=> new
+                {
+                    p.Id,
+                    p.Name,
+                    p.VendorId,
+                    p.CategoryId,
+                    p.Description,
+                    p.Price,
+                    p.Stock,
+                    p.ImageUrl,
+                    p.IsActive,
+                    p.CreatedAt,
+                    TotalSold = p.OrderItems.Sum(oi => (int?)oi.Quantity) })
+                .OrderByDescending(e=> e.TotalSold)
+                .Take(10)
+                .ToList();
+            // -------------------------------------------------------------------------
 
-            return Ok(Products);
+            // Mapping -----------------------------------------------------------------
+            var ProductsDTO = Products.Select(e => new ProductsRespons
+            {
+                Id          = e.Id,
+                Name        = e.Name,
+                VendorId    = e.VendorId,
+                CategoryId  = e.CategoryId,
+                Description = e.Description,
+                Price       = e.Price,
+                Stock       = e.Stock,
+                ImageUrl    = e.ImageUrl,
+                IsActive    = e.IsActive,
+                CreatedAt   = e.CreatedAt,
+                TotalSold   = e.TotalSold,
+            });
+            // -------------------------------------------------------
+
+
+            return Ok(new { Products = ProductsDTO });
         }
         #endregion
 
