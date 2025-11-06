@@ -162,7 +162,7 @@ namespace TagerCom.Areas.Customer.Controllers
             // ------------------------------------------------------
 
             // Get Similar ------------------------------------------
-            var SimilarProduct = await ProductRepo.GetAsync(e=>e.CategoryId == Product.CategoryId);
+            var SimilarProduct = await ProductRepo.GetAsync(e=>e.CategoryId == Product.CategoryId && e.Stock >= 1 && e.IsActive);
             if (Product == null)
                 return NotFound(new {msg = "Have no similar product"});
             // ------------------------------------------------------
