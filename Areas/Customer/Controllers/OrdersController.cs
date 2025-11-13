@@ -72,17 +72,62 @@ namespace TagerCom.Areas.Customer.Controllers
 
 
 
+        [HttpGet("GetMyOrders")]
+        public async Task<IActionResult> GetMyOrders()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
 
+            var orders = await _orderRepo.Query()
+                .Where(o => o.ApplicationUserId == user.Id)
+                .OrderByDescending(o => o.CreatedAt)
+                .Select(o => new OrderResponseDTO
+                {
+                    Id = o.Id,
+                    Status = o.Status,
+                    TotalAmount = o.TotalAmount,
+                    CreatedAt = o.CreatedAt,
+                    VendorName = o.Vendor.Name ?? "Unknown Vendor",
+                    Items = o.OrderItems.Select(i => new OrderItemDTO
+                    {
+                        ProductId = i.ProductId,
+                        ProductName = i.Product.Name ?? "Unknown Product",
+                        Quantity = i.Quantity,
+                        Price = i.Price,
+                        ImageUrl = i.Product.ImageUrl,
+                        Description = i.Product.Description
+                    }).ToList()
+                })
+                .ToListAsync();
 
+            // In Case The customer do not have any orders so it will be empty list 
+            var safeOrders = orders ?? new List<OrderResponseDTO>();
 
-
-
-
+            return Ok(safeOrders);
+        }
 
 
 
     }
 
-    }
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+    
+
+  
 
 

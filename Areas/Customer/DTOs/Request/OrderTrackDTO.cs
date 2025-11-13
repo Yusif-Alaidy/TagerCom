@@ -1,14 +1,17 @@
-﻿namespace TagerCom.Areas.Customer.DTOs.Response
+﻿using TagerCom.Areas.Customer.DTOs.Response;
+
+namespace TagerCom.Areas.Customer.DTOs.Request
 {
-    public class OrderResponseDTO
+    public class OrderTrackDTO
     {
+
         public int Id { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public string CurrentStatus { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
         public DateTime CreatedAt { get; set; }
         public string VendorName { get; set; } = string.Empty;
         public List<OrderItemDTO> Items { get; set; } = new();
-        public string? ErrorMessage { get; set; }   // To make error messages
+        public List<OrderStatusHistoryDTO> StatusHistory { get; set; } = new();
 
     }
 }

@@ -56,6 +56,13 @@ namespace TagerCom.DataAccess
                 .HasForeignKey(o => o.VendorId)
                 .OnDelete(DeleteBehavior.Restrict); // 👈 الحل هنا
 
+            //builder.Entity<Order>()
+            //   .HasOne(o => o.Customer)
+            //   .WithMany()  
+            //   .HasForeignKey(o => o.ApplicationUserId)
+            //   .OnDelete(DeleteBehavior.Restrict);
+
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
