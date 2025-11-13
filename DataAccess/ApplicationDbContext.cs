@@ -56,42 +56,6 @@ namespace TagerCom.DataAccess
                 .HasForeignKey(o => o.VendorId)
                 .OnDelete(DeleteBehavior.Restrict); // 👈 الحل هنا
 
-            builder.Entity<Favorite>().
-                HasOne(f => f.User)
-                .WithMany()
-                .HasForeignKey(f => f.ApplicationUserId)
-                .OnDelete(DeleteBehavior.Cascade);
-   
-
-            builder.Entity<Favorite>()
-                .HasOne(f => f.Product)
-                .WithMany()
-                .HasForeignKey(f => f.ProductId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            builder.Entity<Wishlist>()
-             .HasOne(w => w.User)
-             .WithMany()
-             .HasForeignKey(w => w.ApplicationUserId)
-              .OnDelete(DeleteBehavior.Cascade);  // حذف المستخدم يمسح كل Wishlists
-
-            builder.Entity<Wishlist>()
-                .HasOne(w => w.Product)
-                .WithMany()
-                .HasForeignKey(w => w.ProductId)
-                .OnDelete(DeleteBehavior.NoAction); // حذف المنتج لا يمسح Wishlists تلقائيًا
-
-            builder.Entity<CartItem>()
-                .HasOne(ci => ci.Product)
-                .WithMany()
-                .HasForeignKey(ci => ci.ProductId)
-                .OnDelete(DeleteBehavior.Restrict); // أو NoAction في EF Core 5+
-
-            builder.Entity<CartItem>()
-                .HasOne(ci => ci.Cart)
-                .WithMany()
-                .HasForeignKey(ci => ci.CartId)
-                .OnDelete(DeleteBehavior.Restrict);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

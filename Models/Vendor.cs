@@ -13,7 +13,7 @@ namespace TagerCom.Models
     {
 
         public Guid Id                                  { get; set; }
-
+        public string Name { get; set; }
         // Relation with User
         public string ApplicationUserId                 { get; set; }
         public ApplicationUser ApplicationUser          { get; set; }

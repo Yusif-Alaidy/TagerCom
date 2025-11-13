@@ -6,6 +6,7 @@ namespace TagerCom.Models
     {
         public int Id { get; set; }
         public Guid VendorId { get; set; }
+  
         public int? CategoryId { get; set; }
         public string Name { get; set; } = null!;
         public string Description { get; set; } = null!;
@@ -14,6 +15,7 @@ namespace TagerCom.Models
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public decimal? Rate {  get; set; }
 
         // Navigation
         public Vendor? Vendor { get; set; }
@@ -21,5 +23,6 @@ namespace TagerCom.Models
 
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
 
+        public ICollection<OrderItem>? OrderItems { get; set; }
     }
 }
