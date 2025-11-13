@@ -1,8 +1,10 @@
 ﻿using Azure.Core;
+using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using System.Linq.Expressions;
 using TagerCom.Models;
 namespace TagerCom.Areas.Customer
@@ -37,6 +39,8 @@ namespace TagerCom.Areas.Customer
             var user = await _userManager.GetUserAsync(User);
 
             var favorites = _favoriteRepository.Query().Where(f => f.ApplicationUserId == user.Id)
+
+                //new FavoriteResponseDTO بسجل القيم اللي فيه بس كده 
                 .Select(f => new FavoriteResponseDTO
                 {
                     Id = f.Id,
@@ -51,6 +55,32 @@ namespace TagerCom.Areas.Customer
             return Ok(favorites);
 
 
+
+
+            // Using GetOneAsync
+            //var user = await _userManager.GetUserAsync(User);
+            //if (user == null)
+            //    return NotFound();
+            //var favorite = (await _favoriteRepository.GetOneAsync(z => z.ApplicationUserId == user.Id)).
+            //    (z => new  FavoriteResponseDTO
+
+            //{
+            //    Id = favorite.Id,
+            //    ProductId = favorite.ProductId,
+            //    ProductName = favorite.Product.Name,
+            //    ImageUrl = favorite.Product.ImageUrl,
+            //    Price = favorite.Product.Price,
+            //    CreatedAt = favorite.CreatedAt
+
+
+            //});
+
+
+            //var aa = (await _favoriteRepository.GetAsync(z => z.ApplicationUserId == user.Id)).Select(z=> new
+            //{
+            //    z.ApplicationUserId,
+
+            //})
         }
 
         [Authorize(Roles = "Customer")]
@@ -77,6 +107,8 @@ namespace TagerCom.Areas.Customer
             if (addingProduct == null)
                 return NotFound(new { message = "Product not found." });
 
+          
+            
             var favorite = new Favorite
             {
                 ApplicationUserId = user.Id,
@@ -133,7 +165,7 @@ namespace TagerCom.Areas.Customer
                 return BadRequest(new { msg = "User not found" });
 
             //  Checking request 
-            if (request == null || request.ProductId <= 0)
+            if ( request.ProductId <= 0)
                 return BadRequest(new { msg = "Invalid product" });
               // Checking of the wishlist is already exists
             var exists = await _wishlistRepository.Query()
@@ -174,6 +206,14 @@ namespace TagerCom.Areas.Customer
                 includes: new Expression<Func<Wishlist, object>>[] { w => w.Product }
             );
 
+            //var wish = (await _wishlistRepository.Query().Where(w => w.ApplicationUserId == user.Id)).Select(w=> new
+            //{
+
+            //    w.ApplicationUserId,
+            //    w.
+
+            //})
+
             if (wishlist == null || !wishlist.Any())
                 return Ok(new { msg = "Your wishlist is empty" });
 
@@ -187,7 +227,7 @@ namespace TagerCom.Areas.Customer
                 ProductPrice = w.Product?.Price ?? 0,
                 ProductDescription = w.Product?.Description,
                 CreatedAt = w.CreatedAt
-            }).ToList();
+            });
 
             return Ok(wishlistDto);
         }

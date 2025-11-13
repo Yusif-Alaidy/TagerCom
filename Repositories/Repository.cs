@@ -9,7 +9,7 @@ namespace TagerCom.Repositories
         private DataAccess.ApplicationDbContext _context;// = new();
         private DbSet<T> _db;
 
-        public Repository(DataAccess.ApplicationDbContext context)
+        public Repository(ApplicationDbContext context)
         {
             _context = context;
             _db = _context.Set<T>();

@@ -57,8 +57,10 @@ namespace TagerCom.Utility.DbInitializer
                         EmailConfirmed = true,
 
                     }, "Admin@123").GetAwaiter().GetResult();
+
                     var user = UserManger.FindByEmailAsync("Admin@gmail.com").GetAwaiter().GetResult();
                     user.EmailConfirmed = true;
+
                     if (user is not null)
                         UserManger.AddToRoleAsync(user, "Admin").GetAwaiter().GetResult();
                 }
