@@ -5,6 +5,7 @@ namespace TagerCom.Repositories.IRepositories
 {
     public interface IRepository<T> where T : class
     {
+        IQueryable<T> Query();
 
         void Update(T entity);
 
