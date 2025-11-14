@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TagerCom.DataAccess;
 
@@ -11,9 +12,11 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251105194616_init")]
+    partial class init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -307,34 +310,6 @@ namespace TagerCom.Migrations
                     b.ToTable("Category");
                 });
 
-            modelBuilder.Entity("TagerCom.Models.Favorite", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("Favorite");
-                });
-
             modelBuilder.Entity("TagerCom.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -482,7 +457,7 @@ namespace TagerCom.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-                        
+
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -494,6 +469,9 @@ namespace TagerCom.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("Rate")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Stock")
@@ -554,13 +532,14 @@ namespace TagerCom.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid?>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<string>("CustomerId1")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int?>("ProductId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int?>("ProductId1")
@@ -574,6 +553,8 @@ namespace TagerCom.Migrations
                     b.HasIndex("CustomerId1");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductId1");
 
                     b.ToTable("Review");
                 });
@@ -780,34 +761,6 @@ namespace TagerCom.Migrations
                     b.ToTable("Wallet");
                 });
 
-            modelBuilder.Entity("TagerCom.Models.Wishlist", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ApplicationUserId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("Wishlist");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -898,25 +851,6 @@ namespace TagerCom.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("TagerCom.Models.Favorite", b =>
-                {
-                    b.HasOne("TagerCom.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TagerCom.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("TagerCom.Models.Notification", b =>
                 {
                     b.HasOne("TagerCom.Models.ApplicationUser", "User")
@@ -950,7 +884,7 @@ namespace TagerCom.Migrations
             modelBuilder.Entity("TagerCom.Models.OrderItem", b =>
                 {
                     b.HasOne("TagerCom.Models.Product", "Product")
-                        .WithMany()
+                        .WithMany("OrderItems")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1006,10 +940,14 @@ namespace TagerCom.Migrations
                         .IsRequired();
 
                     b.HasOne("TagerCom.Models.Product", "Product")
-                        .WithMany("Reviews")
+                        .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("TagerCom.Models.Product", null)
+                        .WithMany("Reviews")
+                        .HasForeignKey("ProductId1");
 
                     b.Navigation("Customer");
 
@@ -1078,25 +1016,6 @@ namespace TagerCom.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TagerCom.Models.Wishlist", b =>
-                {
-                    b.HasOne("TagerCom.Models.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TagerCom.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("TagerCom.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Vendor");
@@ -1111,6 +1030,8 @@ namespace TagerCom.Migrations
 
             modelBuilder.Entity("TagerCom.Models.Product", b =>
                 {
+                    b.Navigation("OrderItems");
+
                     b.Navigation("Reviews");
                 });
 

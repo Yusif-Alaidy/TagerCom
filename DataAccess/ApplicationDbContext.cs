@@ -92,6 +92,13 @@ namespace TagerCom.DataAccess
                 .WithMany()
                 .HasForeignKey(ci => ci.CartId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Review>()
+                .HasOne(o => o.Product)
+                .WithMany()
+                .HasForeignKey(o => o.ProductId)
+                .OnDelete(DeleteBehavior.Restrict); // 👈 الحل هنا
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

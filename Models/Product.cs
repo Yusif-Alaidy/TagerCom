@@ -14,12 +14,15 @@ namespace TagerCom.Models
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public decimal? Rate {  get; set; }
 
         // Navigation
+        public List<Review> Reviews { get; set; }
         public Vendor? Vendor { get; set; }
         public Category? Category { get; set; }
 
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
 
+        public ICollection<OrderItem> OrderItems { get; set; } new List<OrderItem>();
     }
 }
