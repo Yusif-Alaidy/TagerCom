@@ -15,6 +15,7 @@
         public Vendor Vendor { get; set; } = null!;
         public Payment? Payment { get; set; }
         public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public ICollection<OrderStatusHistory> StatusHistory { get; set; } = new List<OrderStatusHistory>();
 
     }
 }

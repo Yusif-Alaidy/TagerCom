@@ -1,4 +1,6 @@
-﻿namespace TagerCom.Areas.Customer.DTOs.Response
+﻿using TagerCom.Areas.Customer.DTOs.Request;
+
+namespace TagerCom.Areas.Customer.DTOs.Response
 {
     public class OrderItemDTO
     {
@@ -9,6 +11,7 @@
 
         public string? ImageUrl { get; set; }
         public string Description { get; set; } = null!;
+        public List<OrderStatusHistoryDTO> StatusHistory { get; set; }
 
     }
 }

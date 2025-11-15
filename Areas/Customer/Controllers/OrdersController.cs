@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TagerCom.Areas.Customer.DTOs.Request;
 using TagerCom.Areas.Customer.DTOs.Response;
 
 namespace TagerCom.Areas.Customer.Controllers
@@ -75,9 +77,13 @@ namespace TagerCom.Areas.Customer.Controllers
         [HttpGet("GetMyOrders")]
         public async Task<IActionResult> GetMyOrders()
         {
+            //  Get User  --------------------------------  
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
                 return Unauthorized();
+
+            //  Projection To DTO  --------------------------------  
 
             var orders = await _orderRepo.Query()
                 .Where(o => o.ApplicationUserId == user.Id)
@@ -106,6 +112,118 @@ namespace TagerCom.Areas.Customer.Controllers
 
             return Ok(safeOrders);
         }
+
+
+        [HttpGet("TrackOrder/{id}")]
+        public async Task<IActionResult> TrackOrder(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            // Query -------------------------------------------
+            var order = await _orderRepo.Query()
+                .Where(o => o.Id == id && o.ApplicationUserId == user.Id)
+                .Include(o => o.OrderItems)
+                .ThenInclude(i => i.Product)
+                .Include(o => o.StatusHistory)
+                .Include(o => o.Vendor)
+                .FirstOrDefaultAsync();
+
+            if (order == null)
+                return NotFound("Order not found or you don’t have access to it");
+
+            // Get StatusHistory ------------------------------
+            var historyList = order.StatusHistory
+                .OrderBy(h => h.ChangedAt)
+                .Select(h => new OrderStatusHistoryDTO
+                {
+                    Status = h.Status,
+                    ChangedAt = h.ChangedAt
+                })
+                .ToList();
+
+            // get DTO prepared
+            var dto = new OrderTrackDTO
+            {
+                Id = order.Id,
+                CurrentStatus = order.StatusHistory
+                    .OrderByDescending(h => h.ChangedAt)
+                    .Select(h => h.Status)
+                    .FirstOrDefault() ?? order.Status,
+
+                TotalAmount = order.TotalAmount,
+                CreatedAt = order.CreatedAt,
+                VendorName = order.Vendor?.Name ?? "Unknown Vendor",
+
+                Items = order.OrderItems.Select(i => new OrderItemDTO
+                {
+                    ProductId = i.ProductId,
+                    ProductName = i.Product?.Name ?? "Unknown Product",
+                    Quantity = i.Quantity,
+                    Price = i.Price,
+                    ImageUrl = i.Product?.ImageUrl,
+                    Description = i.Product?.Description,
+
+                 // Here we add every status changes that happened in the product ------------------
+                    StatusHistory = historyList
+                }).ToList()
+            };
+
+            return Ok(dto);
+        }
+
+
+
+
+        [HttpPost("CancelOrder/{id}")]
+        public async Task<IActionResult> CancelOrder(int id)
+        {
+            // Get user  ------------------------------------------
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            // Query  ------------------------------------------
+
+            var order = await _orderRepo.Query()
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Product)
+                .Include(o => o.StatusHistory)
+                .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == user.Id);
+
+            if (order == null)
+                return NotFound("Order not found");
+
+            if (order.Status == "Cancelled")
+                return BadRequest("Order is already cancelled");
+
+            if (order.Status == "Completed" || order.Status == "Shipped")
+                return BadRequest("Delivered orders cannot be cancelled");
+
+            // Changing Status ------------------------------------------
+            order.Status = "Cancelled";
+            order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.Id,
+                Status = "Cancelled",
+                ChangedAt = DateTime.UtcNow
+            });
+
+            //  Restock Products  ------------------------------------------
+
+            foreach (var item in order.OrderItems)
+            {
+                if (item.Product != null)
+                    item.Product.Stock += item.Quantity;
+            }
+
+            await _orderRepo.CommitAsync();
+
+            return Ok(new { message = "Order cancelled successfully" });
+        }
+
 
 
 
