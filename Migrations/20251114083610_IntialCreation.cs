@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TagerCom.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class IntialCreation : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -71,6 +71,25 @@ namespace TagerCom.Migrations
                         column: x => x.ParentId,
                         principalTable: "Category",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Coupon",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Code = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DiscountPercentage = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ExpirationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UsageLimit = table.Column<int>(type: "int", nullable: false),
+                    TimesUsed = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    VendorId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Coupon", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -185,16 +204,15 @@ namespace TagerCom.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UserId1 = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Cart", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Cart_AspNetUsers_UserId1",
-                        column: x => x.UserId1,
+                        name: "FK_Cart_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -396,7 +414,7 @@ namespace TagerCom.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CategoryId = table.Column<int>(type: "int", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -419,8 +437,7 @@ namespace TagerCom.Migrations
                         name: "FK_Product_Vendor_VendorId",
                         column: x => x.VendorId,
                         principalTable: "Vendor",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -525,12 +542,12 @@ namespace TagerCom.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ProductId = table.Column<int>(type: "int", nullable: false),
-                    CustomerId = table.Column<int>(type: "int", nullable: false),
+                    ProductId = table.Column<int>(type: "int", nullable: true),
+                    CustomerId = table.Column<int>(type: "int", nullable: true),
                     Rating = table.Column<int>(type: "int", nullable: false),
                     Comment = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CustomerId1 = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CustomerId1 = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     ProductId1 = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -540,8 +557,7 @@ namespace TagerCom.Migrations
                         name: "FK_Review_AspNetUsers_CustomerId1",
                         column: x => x.CustomerId1,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Review_Product_ProductId",
                         column: x => x.ProductId,
@@ -595,9 +611,9 @@ namespace TagerCom.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Cart_UserId1",
+                name: "IX_Cart_ApplicationUserId",
                 table: "Cart",
-                column: "UserId1");
+                column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CartItem_CartId",
@@ -722,6 +738,9 @@ namespace TagerCom.Migrations
 
             migrationBuilder.DropTable(
                 name: "CartItem");
+
+            migrationBuilder.DropTable(
+                name: "Coupon");
 
             migrationBuilder.DropTable(
                 name: "Notification");

@@ -12,8 +12,8 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251105194616_init")]
-    partial class init
+    [Migration("20251114083610_IntialCreation")]
+    partial class IntialCreation
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -245,19 +245,16 @@ namespace TagerCom.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId1")
+                    b.Property<string>("ApplicationUserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId1");
+                    b.HasIndex("ApplicationUserId");
 
                     b.ToTable("Cart");
                 });
@@ -308,6 +305,41 @@ namespace TagerCom.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Category");
+                });
+
+            modelBuilder.Entity("TagerCom.Models.Coupon", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TimesUsed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("VendorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Coupon");
                 });
 
             modelBuilder.Entity("TagerCom.Models.Notification", b =>
@@ -477,7 +509,7 @@ namespace TagerCom.Migrations
                     b.Property<int>("Stock")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("VendorId")
+                    b.Property<Guid?>("VendorId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -532,14 +564,13 @@ namespace TagerCom.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CustomerId")
+                    b.Property<int?>("CustomerId")
                         .HasColumnType("int");
 
                     b.Property<string>("CustomerId1")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("ProductId")
+                    b.Property<int?>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int?>("ProductId1")
@@ -816,7 +847,7 @@ namespace TagerCom.Migrations
                 {
                     b.HasOne("TagerCom.Models.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("UserId1")
+                        .HasForeignKey("ApplicationUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -826,7 +857,7 @@ namespace TagerCom.Migrations
             modelBuilder.Entity("TagerCom.Models.CartItem", b =>
                 {
                     b.HasOne("TagerCom.Models.Cart", "Cart")
-                        .WithMany()
+                        .WithMany("CartItems")
                         .HasForeignKey("CartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -911,9 +942,7 @@ namespace TagerCom.Migrations
 
                     b.HasOne("TagerCom.Models.Vendor", "Vendor")
                         .WithMany("Products")
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("VendorId");
 
                     b.Navigation("Category");
 
@@ -935,15 +964,12 @@ namespace TagerCom.Migrations
                 {
                     b.HasOne("TagerCom.Models.ApplicationUser", "Customer")
                         .WithMany()
-                        .HasForeignKey("CustomerId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CustomerId1");
 
                     b.HasOne("TagerCom.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TagerCom.Models.Product", null)
                         .WithMany("Reviews")
@@ -1021,6 +1047,11 @@ namespace TagerCom.Migrations
                     b.Navigation("Vendor");
 
                     b.Navigation("userAddresses");
+                });
+
+            modelBuilder.Entity("TagerCom.Models.Cart", b =>
+                {
+                    b.Navigation("CartItems");
                 });
 
             modelBuilder.Entity("TagerCom.Models.Order", b =>

@@ -15,8 +15,8 @@ namespace TagerCom.Models
         public Guid Id                                  { get; set; }
 
         // Relation with User
-        public string ApplicationUserId                 { get; set; }
-        public ApplicationUser ApplicationUser          { get; set; }
+        public string ApplicationUserId                 { get; set; } = null!;
+        public ApplicationUser ApplicationUser          { get; set; } = null!;
 
         // Business Info
         public string CompanyName                       { get; set; } = null!;
@@ -36,5 +36,6 @@ namespace TagerCom.Models
 
         // Navigation
         public List<Product>? Products                  { get; set; }
+        public List<Order>? Orders                      { get; set; }
     }
 }

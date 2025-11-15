@@ -7,7 +7,7 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
-        public ApplicationUser User { get; set; }
+        public ApplicationUser User { get; set; } = null!;
         public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
     }

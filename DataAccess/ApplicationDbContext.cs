@@ -34,6 +34,9 @@ namespace TagerCom.DataAccess
         public DbSet<UserOTP>           UserOTP         { get; set; }
         public DbSet<Vendor>            Vendor          { get; set; }
         public DbSet<Wallet>            Wallet          { get; set; }
+        public DbSet<Coupon>            Coupon          { get; set; }
+        public DbSet<Points>            Points          { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -59,6 +62,24 @@ namespace TagerCom.DataAccess
                 .WithMany()
                 .HasForeignKey(o => o.ProductId)
                 .OnDelete(DeleteBehavior.Restrict); // 👈 الحل هنا
+            builder.Entity<Order>()
+            .HasOne(o => o.Customer)
+            .WithMany()
+            .HasForeignKey(o => o.ApplicationUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Order>()
+                .HasOne(o => o.Vendor)
+                .WithMany(v => v.Orders)    // Add List<Order> Orders in Vendor model
+                .HasForeignKey(o => o.VendorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payment 1-to-1 Order → Payment
+            builder.Entity<Order>()
+                .HasOne(o => o.Payment)
+                .WithOne(p => p.Order)
+                .HasForeignKey<Payment>(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
 
         }
 
