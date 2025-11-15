@@ -134,6 +134,7 @@ namespace TagerCom.Areas.Customer.Controllers
                 return NotFound("Order not found or you don’t have access to it");
 
             // Get StatusHistory ------------------------------
+            //جاب هنا تاريخ الحالات بتاعت الاوردر يعني اتحشن ولا وصل ولا لسه معمول 
             var historyList = order.StatusHistory
                 .OrderBy(h => h.ChangedAt)
                 .Select(h => new OrderStatusHistoryDTO
@@ -146,6 +147,8 @@ namespace TagerCom.Areas.Customer.Controllers
             // get DTO prepared
             var dto = new OrderTrackDTO
             {
+                // هنا بيجيب اخر حاله حصلت للمنتج 
+
                 Id = order.Id,
                 CurrentStatus = order.StatusHistory
                     .OrderByDescending(h => h.ChangedAt)
