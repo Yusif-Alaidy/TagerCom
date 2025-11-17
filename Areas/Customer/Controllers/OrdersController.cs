@@ -16,16 +16,16 @@ namespace TagerCom.Areas.Customer.Controllers
         private readonly IRepository<Order> _orderRepo;
         private readonly IRepository<OrderItem> _oritemRepo;
 
-        public OrdersController(UserManager<ApplicationUser> userManager, IRepository<Order> orderRepo, IRepository<OrderItem> OrItemRepo)
+        public OrdersController(UserManager<ApplicationUser> userManager,
+            IRepository<Order> orderRepo, IRepository<OrderItem> OrItemRepo)
         {
             _userManager = userManager;
             _orderRepo = orderRepo;
             _oritemRepo = OrItemRepo;
-
         }
 
 
-        [HttpGet("GetOrder")]
+        [HttpGet("GetOrder/{id}")]
         public async Task<IActionResult> GetOrder(int id)
         {
             //  Get User  --------------------------------  
@@ -33,32 +33,36 @@ namespace TagerCom.Areas.Customer.Controllers
             if (user == null)
                 return Unauthorized();
 
-            //  Projection To DTO  --------------------------------  
+            // Pure Projection To DTO  --------------------------------------  
             var order = await _orderRepo.Query()
                 .Where(o => o.Id == id && o.ApplicationUserId == user.Id)
                 .Select(o => new OrderResponseDTO
                 {
                     Id = o.Id,
-                    Status = o.Status,
+                    CurrentStatus = o.StatusHistory
+                      .OrderByDescending(h => h.ChangedAt)
+                       .Select(h => h.Status)
+                          .FirstOrDefault() ?? o.Status,
                     TotalAmount = o.TotalAmount,
                     CreatedAt = o.CreatedAt,
-                    VendorName = o.Vendor != null ? o.Vendor.Name : "Unknown Vendor",
-                    Items = o.OrderItems != null
-                        ? o.OrderItems.Select(i => new OrderItemDTO
+                    VendorName = o.Vendor.Name ,
+                    Items = o.OrderItems 
+
+                        .Select(i => new OrderItemDTO
                         {
                             ProductId = i.ProductId,
-                            ProductName = i.Product != null ? i.Product.Name : "Unknown Product",
+                            ProductName = i.Product.Name,
                             Quantity = i.Quantity,
                             Price = i.Price,
                             ImageUrl = i.Product.ImageUrl,
-                            Description=i.Product.Description,
+                            Description = i.Product.Description,
 
                         }).ToList()
-                        : new List<OrderItemDTO>()
+                        
                 })
                 .FirstOrDefaultAsync();
 
-            //  Check order --------------------------------  
+            //  Check order -------------------------------------- 
             if (order == null)
                 return NotFound("Order not found or you don’t have access to it");
 
@@ -66,8 +70,8 @@ namespace TagerCom.Areas.Customer.Controllers
             if (order.Items == null || !order.Items.Any())
                 return BadRequest("This order has no items");
 
-             if (order.Status != "completed")
-                 return BadRequest("Order is not completed yet");
+             //if (order.Status != "completed")
+             //    return BadRequest("Order is not completed yet");
 
             return Ok(order);
         }
@@ -83,7 +87,7 @@ namespace TagerCom.Areas.Customer.Controllers
             if (user == null)
                 return Unauthorized();
 
-            //  Projection To DTO  --------------------------------  
+            // Query by Projection DTO  --------------------------------  
 
             var orders = await _orderRepo.Query()
                 .Where(o => o.ApplicationUserId == user.Id)
@@ -91,14 +95,17 @@ namespace TagerCom.Areas.Customer.Controllers
                 .Select(o => new OrderResponseDTO
                 {
                     Id = o.Id,
-                    Status = o.Status,
+                    CurrentStatus = o.StatusHistory
+                      .OrderByDescending(h => h.ChangedAt)
+                       .Select(h => h.Status)
+                          .FirstOrDefault() ?? o.Status,
                     TotalAmount = o.TotalAmount,
                     CreatedAt = o.CreatedAt,
                     VendorName = o.Vendor.Name ?? "Unknown Vendor",
                     Items = o.OrderItems.Select(i => new OrderItemDTO
                     {
                         ProductId = i.ProductId,
-                        ProductName = i.Product.Name ?? "Unknown Product",
+                        ProductName = i.Product.Name ,
                         Quantity = i.Quantity,
                         Price = i.Price,
                         ImageUrl = i.Product.ImageUrl,
@@ -121,7 +128,7 @@ namespace TagerCom.Areas.Customer.Controllers
             if (user == null)
                 return Unauthorized();
 
-            // Query -------------------------------------------
+            // Client Side Projection -------------------------------------------
             var order = await _orderRepo.Query()
                 .Where(o => o.Id == id && o.ApplicationUserId == user.Id)
                 .Include(o => o.OrderItems)
@@ -134,13 +141,12 @@ namespace TagerCom.Areas.Customer.Controllers
                 return NotFound("Order not found or you don’t have access to it");
 
             // Get StatusHistory ------------------------------
-            //جاب هنا تاريخ الحالات بتاعت الاوردر يعني اتحشن ولا وصل ولا لسه معمول 
-            var historyList = order.StatusHistory
+               var historyList = order.StatusHistory
                 .OrderBy(h => h.ChangedAt)
-                .Select(h => new OrderStatusHistoryDTO
+                .Select(h => new OrderStatusHistoryDTO //ده Logic لأنك بتبني data structure جديد من Entity.
                 {
                     Status = h.Status,
-                    ChangedAt = h.ChangedAt
+                    ChangedAt = h.ChangedAt 
                 })
                 .ToList();
 
@@ -151,9 +157,9 @@ namespace TagerCom.Areas.Customer.Controllers
 
                 Id = order.Id,
                 CurrentStatus = order.StatusHistory
-                    .OrderByDescending(h => h.ChangedAt)
-                    .Select(h => h.Status)
-                    .FirstOrDefault() ?? order.Status,
+                .OrderByDescending(h => h.ChangedAt)
+                .Select(h => h.Status)
+                .FirstOrDefault() ?? order.Status,
 
                 TotalAmount = order.TotalAmount,
                 CreatedAt = order.CreatedAt,
@@ -166,7 +172,7 @@ namespace TagerCom.Areas.Customer.Controllers
                     Quantity = i.Quantity,
                     Price = i.Price,
                     ImageUrl = i.Product?.ImageUrl,
-                    Description = i.Product?.Description,
+                    Description = i.Product.Description,
 
                  // Here we add every status changes that happened in the product ------------------
                     StatusHistory = historyList
@@ -179,7 +185,7 @@ namespace TagerCom.Areas.Customer.Controllers
 
 
 
-        [HttpPost("CancelOrder/{id}")]
+        [HttpDelete("CancelOrder/{id}")]
         public async Task<IActionResult> CancelOrder(int id)
         {
             // Get user  ------------------------------------------
@@ -188,11 +194,11 @@ namespace TagerCom.Areas.Customer.Controllers
             if (user == null)
                 return Unauthorized();
 
-            // Query  ------------------------------------------
+            // Query Client Side  ------------------------------------------
 
             var order = await _orderRepo.Query()
                 .Include(o => o.OrderItems)
-                    .ThenInclude(oi => oi.Product)
+                .ThenInclude(oi => oi.Product)
                 .Include(o => o.StatusHistory)
                 .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == user.Id);
 
@@ -202,9 +208,7 @@ namespace TagerCom.Areas.Customer.Controllers
             if (order.Status == "Cancelled")
                 return BadRequest("Order is already cancelled");
 
-            if (order.Status == "Completed" || order.Status == "Shipped")
-                return BadRequest("Delivered orders cannot be cancelled");
-
+   
             // Changing Status ------------------------------------------
             order.Status = "Cancelled";
             order.StatusHistory.Add(new OrderStatusHistory
@@ -228,6 +232,47 @@ namespace TagerCom.Areas.Customer.Controllers
         }
 
 
+        [HttpDelete("CancelOrderItem/{orderId}/{itemId}")]
+        public async Task<IActionResult> CancelOrderItem(int orderId, int itemId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            var order = await _orderRepo.Query()
+                .Include(o => o.OrderItems)
+                //Then include because product exist in orderitem as navigation property
+                .ThenInclude(oi => oi.Product)
+                .Include(o => o.StatusHistory)
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.ApplicationUserId == user.Id);
+
+            if (order == null) return NotFound("Order not found");
+
+            var item = order.OrderItems.FirstOrDefault(i => i.Id == itemId);
+            if (item == null) return NotFound("Item not found in this order");
+
+           
+            // Restock product ------------------------------------------
+            if (item.Product != null) 
+                item.Product.Stock += item.Quantity;
+
+            // Remove item ------------------------------------------
+            order.OrderItems.Remove(item);
+
+            // Update order status ------------------------------------------
+            order.Status = order.OrderItems.Any() ? "PartiallyCancelled" : "Cancelled";
+
+            // Add status history ------------------------------------------
+            order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = order.Id,
+                Status = order.Status,
+                ChangedAt = DateTime.UtcNow
+            });
+
+            await _orderRepo.CommitAsync();
+
+            return Ok(new { message = "Item cancelled successfully", orderStatus = order.Status });
+        }
 
 
     }
