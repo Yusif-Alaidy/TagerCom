@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Security.Claims;
+using TagerCom.DataAccess;
+using TagerCom.DTOs.Request;
+using TagerCom.Models;
+using TagerCom.Repositories.IRepositories;
 
 namespace TagerCom.Areas.Customer.Controllers
 {
@@ -10,7 +14,6 @@ namespace TagerCom.Areas.Customer.Controllers
     [Area("Customer")]
     public class CartsController : ControllerBase
     {
-
         private readonly IRepository<Cart> _cartRepo;
         private readonly IRepository<CartItem> _cartItemRepo;
         private readonly IRepository<Product> _productRepo;
@@ -31,7 +34,7 @@ namespace TagerCom.Areas.Customer.Controllers
             IRepository<OrderItem> orderItemRepo,
             IRepository<Payment> paymentRepo,
             ApplicationDbContext dbContext
-            )
+        )
         {
             _cartRepo = cartRepo;
             _cartItemRepo = cartItemRepo;
@@ -43,12 +46,29 @@ namespace TagerCom.Areas.Customer.Controllers
             _paymentRepo = paymentRepo;
             _dbContext = dbContext;
         }
+
+        // ----------------------------------------------------
+        // Helpers
+        // ----------------------------------------------------
+        private string? GetUserIdFromClaims()
+        {
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
+        // ----------------------------------------------------
+        // Add to cart
+        // (still accepts userId param like your original code)
+        // ----------------------------------------------------
         #region AddToCart
         [HttpPost("add")]
         public async Task<IActionResult> AddToCart(string userId, int productId, int quantity = 1)
         {
+            if (quantity <= 0)
+                return BadRequest(new { msg = "Quantity must be at least 1." });
+
             // Get user's cart
-            var cart = (await _cartRepo.GetAsync(c => c.ApplicationUserId == userId, null)).FirstOrDefault();
+            var cart = (await _cartRepo.GetAsync(c => c.ApplicationUserId == userId, null))
+                .FirstOrDefault();
 
             if (cart is null)
             {
@@ -67,7 +87,8 @@ namespace TagerCom.Areas.Customer.Controllers
                 return BadRequest(new { msg = "Insufficient stock" });
 
             // Check if cart item exists
-            var cartItem = (await _cartItemRepo.GetAsync(ci => ci.CartId == cart.Id && ci.ProductId == productId, null)).FirstOrDefault();
+            var cartItem = (await _cartItemRepo.GetAsync(
+                ci => ci.CartId == cart.Id && ci.ProductId == productId, null)).FirstOrDefault();
 
             if (cartItem != null)
             {
@@ -89,17 +110,22 @@ namespace TagerCom.Areas.Customer.Controllers
             return Ok(new { msg = "Item added to cart successfully" });
         }
         #endregion
-        
+
+        // ----------------------------------------------------
+        // Update cart item
+        // ----------------------------------------------------
         #region UpdateCartItem
         [HttpPut("update")]
         public async Task<IActionResult> UpdateCartItem(int cartItemId, int quantity)
         {
-            var cartItem = await _cartItemRepo.GetOneAsync(ci => ci.Id == cartItemId, new Expression<Func<CartItem, object>>[] { ci => ci.Product });
+            var cartItem = await _cartItemRepo.GetOneAsync(
+                ci => ci.Id == cartItemId,
+                new Expression<Func<CartItem, object>>[] { ci => ci.Product });
 
             if (cartItem is null)
                 return NotFound(new { msg = "Cart item not found." });
 
-            // 🧮 If quantity = 0 → remove the item
+            // If quantity = 0 → remove the item
             if (quantity <= 0)
             {
                 _cartItemRepo.Delete(cartItem);
@@ -107,7 +133,7 @@ namespace TagerCom.Areas.Customer.Controllers
                 return Ok(new { msg = "Item removed from cart." });
             }
 
-            // 🧾 Check stock
+            // Check stock
             if (cartItem.Product.Stock < quantity)
                 return BadRequest(new { msg = $"Not enough stock for {cartItem.Product.Name}." });
 
@@ -118,7 +144,10 @@ namespace TagerCom.Areas.Customer.Controllers
             return Ok(new { msg = "Cart item updated successfully.", cartItemId, newQuantity = quantity });
         }
         #endregion
-        
+
+        // ----------------------------------------------------
+        // Remove item
+        // ----------------------------------------------------
         #region RemoveItem
         [HttpDelete("remove/{itemId}")]
         public async Task<IActionResult> RemoveItem(int itemId)
@@ -135,80 +164,65 @@ namespace TagerCom.Areas.Customer.Controllers
         }
         #endregion
 
-        #region ApplyCoupon
-        [HttpPost("apply-coupon")]
-        public async Task<IActionResult> ApplyCoupon(string userId, string couponCode)
+        // ----------------------------------------------------
+        // PRIVATE – Apply Coupon (no API endpoint)
+        // ----------------------------------------------------
+        #region ApplyCouponHelper
+        private async Task<decimal> ApplyCouponAsync(string couponCode, decimal cartTotal, List<CartItem> cartItems)
         {
             var coupon = await _couponRepo.GetOneAsync(c => c.Code == couponCode && c.IsActive);
 
-            if (coupon is null) return NotFound(new { msg = "Invalid coupon code." });
+            if (coupon == null)
+                throw new Exception("Invalid coupon code.");
 
             if (coupon.ExpirationDate < DateTime.UtcNow)
-                return BadRequest(new { msg = "This coupon has expired." });
+                throw new Exception("This coupon has expired.");
 
             if (coupon.TimesUsed >= coupon.UsageLimit)
-                return BadRequest(new { msg = "This coupon has reached its usage limit." });
+                throw new Exception("This coupon has reached its usage limit.");
 
-            var cart = await _cartRepo.GetOneAsync(c => c.ApplicationUserId == userId,
-                new Expression<Func<Cart, object>>[] { c => c.CartItems });
+            // Optional vendor-specific coupon (Coupon.VendorId is Guid?)
+            if (coupon.VendorId.HasValue)
+            {
+                var vendorId = coupon.VendorId.Value;
 
-            if (cart is null) return NotFound(new { msg = "Cart not found." });
+                if (!cartItems.Any(ci => ci.Product.VendorId == vendorId))
+                    throw new Exception("Coupon not applicable to these items.");
+            }
 
-            var cartItems = await _cartItemRepo.GetAsync(ci => ci.CartId == cart.Id,
-                new Expression<Func<CartItem, object>>[] { ci => ci.Product });
+            decimal discount = cartTotal * (coupon.DiscountPercentage / 100m);
 
-            if (!cartItems.Any()) return BadRequest(new { msg = "Cart is empty." });
-
-            
-
-            decimal total = cartItems.Sum(ci => ci.Product.Price * ci.Quantity);
-
-            decimal discount = total * (coupon.DiscountPercentage / 100m);
-            decimal totalAfterDiscount = total - discount;
-
-            // update coupon usage
+            // Increase usage (will be saved in the same transaction)
             coupon.TimesUsed++;
             _couponRepo.Update(coupon);
-            await _couponRepo.CommitAsync();
 
-            return Ok(new
-            {
-                msg = "Coupon applied successfully.",
-                coupon = coupon.Code,
-                discountPercentage = coupon.DiscountPercentage,
-                totalBefore = total,
-                totalAfter = totalAfterDiscount,
-                discountAmount = discount
-            });
+            return discount;
         }
-
         #endregion
 
+        // ----------------------------------------------------
+        // PRIVATE – Add points after order
+        // ----------------------------------------------------
         #region AddPointsToUserAsync
         private async Task AddPointsToUserAsync(string userId, decimal orderTotal)
         {
-            // Convert to points
             int earnedPoints = (int)Math.Floor(orderTotal * 0.0005m);
+            if (earnedPoints <= 0) return;
 
-            if (earnedPoints <= 0)
-                return;
-
-            // Find existing points record
             var points = await _pointsRepo.GetOneAsync(p => p.ApplicationUserId == userId);
 
             if (points == null)
             {
-                // Create new record
                 points = new Points
                 {
                     ApplicationUserId = userId,
-                    TotalPoints = earnedPoints
+                    TotalPoints = earnedPoints,
+                    LastUpdated = DateTime.UtcNow
                 };
                 await _pointsRepo.AddAsync(points);
             }
             else
             {
-                // Add new points
                 points.TotalPoints += earnedPoints;
                 points.LastUpdated = DateTime.UtcNow;
                 _pointsRepo.Update(points);
@@ -218,25 +232,28 @@ namespace TagerCom.Areas.Customer.Controllers
         }
         #endregion
 
+        // ----------------------------------------------------
+        // PRIVATE – Apply points discount (no API endpoint)
+        // ----------------------------------------------------
         #region ApplyPointsDiscountAsync
         public static class PointsSettings
         {
-            public const decimal CurrencyPerPoint = 0.10m; // 1 point = $0.10
+            public const decimal CurrencyPerPoint = 0.10m; // 1 point = 0.10
         }
+
         private async Task<decimal> ApplyPointsDiscountAsync(string userId, int pointsRequested)
         {
-            var points = await _pointsRepo.GetOneAsync(p => p.ApplicationUserId == userId);
-
-            if (points == null || points.TotalPoints == 0)
+            if (pointsRequested <= 0)
                 return 0;
 
-            // Ensure user can't use more than they own
-            int pointsToUse = Math.Min(pointsRequested, points.TotalPoints);
+            var points = await _pointsRepo.GetOneAsync(p => p.ApplicationUserId == userId);
 
-            // Convert points → money
+            if (points == null || points.TotalPoints <= 0)
+                return 0;
+
+            int pointsToUse = Math.Min(pointsRequested, points.TotalPoints);
             decimal discount = pointsToUse * PointsSettings.CurrencyPerPoint;
 
-            // Deduct used points
             points.TotalPoints -= pointsToUse;
             points.LastUpdated = DateTime.UtcNow;
 
@@ -247,30 +264,36 @@ namespace TagerCom.Areas.Customer.Controllers
         }
         #endregion
 
+        // ----------------------------------------------------
+        // Checkout – single atomic operation
+        // ----------------------------------------------------
         #region Checkout
         [HttpPost("checkout")]
         public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
         {
-            // get current user id from claims
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = GetUserIdFromClaims();
             if (userId == null) return Unauthorized("User not logged in.");
 
-            // Load cart with items and product details
-            var cart = await _cartRepo.GetOneAsync(c => c.ApplicationUserId == userId,
+            // Load cart with items and product
+            var cart = await _cartRepo.GetOneAsync(
+                c => c.ApplicationUserId == userId,
                 new Expression<Func<Cart, object>>[] { c => c.CartItems });
 
-            if (cart == null) return BadRequest("Cart not found or empty.");
+            if (cart == null)
+                return BadRequest("Cart not found or empty.");
 
-            var cartItems = await _cartItemRepo.GetAsync(ci => ci.CartId == cart.Id,
+            var cartItems = await _cartItemRepo.GetAsync(
+                ci => ci.CartId == cart.Id,
                 new Expression<Func<CartItem, object>>[] { ci => ci.Product });
 
-            if (!cartItems.Any()) return BadRequest("Cart has no items.");
+            if (!cartItems.Any())
+                return BadRequest("Cart has no items.");
 
-            // Validate stock and compute total
+            // Validate stock & compute total
             decimal cartTotal = 0;
             foreach (var ci in cartItems)
             {
-                if (ci.Product == null) // defensive
+                if (ci.Product == null)
                     return BadRequest($"Product (id {ci.ProductId}) not found.");
 
                 if (ci.Product.Stock < ci.Quantity)
@@ -279,42 +302,37 @@ namespace TagerCom.Areas.Customer.Controllers
                 cartTotal += ci.Product.Price * ci.Quantity;
             }
 
-            // Apply coupon if provided
             decimal couponDiscount = 0;
-            if (!string.IsNullOrEmpty(request.CouponCode))
-            {
-                var coupon = await _couponRepo.GetOneAsync(c => c.Code == request.CouponCode && c.IsActive);
-                if (coupon == null)
-                    return BadRequest("Invalid coupon code.");
+            decimal pointsDiscount = 0;
 
-                if (coupon.ExpirationDate < DateTime.UtcNow)
-                    return BadRequest("Coupon expired.");
-
-                if (coupon.TimesUsed >= coupon.UsageLimit)
-                    return BadRequest("Coupon usage limit reached.");
-
-                // optional vendor filtering
-                if (coupon.VendorId.HasValue && !cartItems.Any(ci => ci.Product.VendorId == coupon.VendorId.Value))
-                    return BadRequest("Coupon not applicable to cart items.");
-
-                couponDiscount = cartTotal * (coupon.DiscountPercentage / 100m);
-
-                // update coupon usage now (will save inside transaction)
-                coupon.TimesUsed++;
-                _couponRepo.Update(coupon);
-            }
-
-            // Apply points discount if requested
-            decimal pointsDiscount = await ApplyPointsDiscountAsync(userId, request.PointsToUse);
-
-            decimal finalTotal = cartTotal - couponDiscount - pointsDiscount;
-            if (finalTotal < 0) finalTotal = 0;
-
-            // Start transaction to ensure atomicity
             using (var trx = await _dbContext.Database.BeginTransactionAsync())
             {
                 try
                 {
+                    // ----- Coupon -----
+                    if (!string.IsNullOrWhiteSpace(request.CouponCode))
+                    {
+                        try
+                        {
+                            couponDiscount = await ApplyCouponAsync(
+                                request.CouponCode,
+                                cartTotal,
+                                cartItems.ToList()
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            return BadRequest(new { msg = ex.Message });
+                        }
+                    }
+
+                    // ----- Points -----
+                    pointsDiscount = await ApplyPointsDiscountAsync(userId, request.PointsToUse);
+
+                    // Final total
+                    decimal finalTotal = cartTotal - couponDiscount - pointsDiscount;
+                    if (finalTotal < 0) finalTotal = 0;
+
                     // Deduct stock
                     foreach (var ci in cartItems)
                     {
@@ -323,33 +341,32 @@ namespace TagerCom.Areas.Customer.Controllers
                     }
                     await _productRepo.CommitAsync();
 
-                    // Create Order
+                    // Create order
                     var order = new Order
                     {
                         ApplicationUserId = userId,
-                        VendorId = cartItems.First().Product.VendorId,
+                        VendorId = cartItems.First().Product.VendorId, // Product.VendorId is Guid
                         Status = "Pending",
                         TotalAmount = finalTotal,
                         CreatedAt = DateTime.UtcNow
                     };
                     await _orderRepo.AddAsync(order);
-                    await _orderRepo.CommitAsync(); // to get order.Id
+                    await _orderRepo.CommitAsync();
 
-                    // Create order items
+                    // Order items
                     foreach (var ci in cartItems)
                     {
-                        var orderItem = new OrderItem
+                        await _orderItemRepo.AddAsync(new OrderItem
                         {
                             OrderId = order.Id,
                             ProductId = ci.ProductId,
                             Quantity = ci.Quantity,
                             Price = ci.Product.Price
-                        };
-                        await _orderItemRepo.AddAsync(orderItem);
+                        });
                     }
                     await _orderItemRepo.CommitAsync();
 
-                    // Create Payment record
+                    // Payment
                     var payment = new Payment
                     {
                         OrderId = order.Id,
@@ -361,16 +378,14 @@ namespace TagerCom.Areas.Customer.Controllers
                     await _paymentRepo.AddAsync(payment);
                     await _paymentRepo.CommitAsync();
 
-                    // Clear cart items
+                    // Clear cart
                     await _cartItemRepo.DeleteRangeAsync(cartItems.ToList());
                     await _cartItemRepo.CommitAsync();
 
-                    // Add reward points (call your method)
+                    // Add reward points
                     await AddPointsToUserAsync(userId, order.TotalAmount);
 
                     await trx.CommitAsync();
-
-                    // Optionally send confirmation here (email/notification)
 
                     return Ok(new
                     {
@@ -386,14 +401,10 @@ namespace TagerCom.Areas.Customer.Controllers
                 catch (Exception ex)
                 {
                     await trx.RollbackAsync();
-                    // Optionally log ex
                     return StatusCode(500, new { msg = "Checkout failed", error = ex.Message });
                 }
             }
         }
-
         #endregion
-
-
     }
 }

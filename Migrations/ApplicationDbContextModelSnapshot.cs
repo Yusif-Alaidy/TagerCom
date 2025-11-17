@@ -331,8 +331,8 @@ namespace TagerCom.Migrations
                     b.Property<int>("UsageLimit")
                         .HasColumnType("int");
 
-                    b.Property<int?>("VendorId")
-                        .HasColumnType("int");
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -458,7 +458,6 @@ namespace TagerCom.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TransactionId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -467,6 +466,31 @@ namespace TagerCom.Migrations
                         .IsUnique();
 
                     b.ToTable("Payment");
+                });
+
+            modelBuilder.Entity("TagerCom.Models.Points", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TotalPoints")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.ToTable("Points");
                 });
 
             modelBuilder.Entity("TagerCom.Models.Product", b =>
@@ -506,7 +530,7 @@ namespace TagerCom.Migrations
                     b.Property<int>("Stock")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("VendorId")
+                    b.Property<Guid>("VendorId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -555,19 +579,18 @@ namespace TagerCom.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Comment")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CustomerId1")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int?>("ProductId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int?>("ProductId1")
@@ -578,7 +601,7 @@ namespace TagerCom.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerId1");
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("ProductId");
 
@@ -895,11 +918,11 @@ namespace TagerCom.Migrations
                     b.HasOne("TagerCom.Models.ApplicationUser", "Customer")
                         .WithMany()
                         .HasForeignKey("ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("TagerCom.Models.Vendor", "Vendor")
-                        .WithMany()
+                        .WithMany("Orders")
                         .HasForeignKey("VendorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -931,6 +954,17 @@ namespace TagerCom.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("TagerCom.Models.Points", b =>
+                {
+                    b.HasOne("TagerCom.Models.ApplicationUser", "ApplicationUser")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationUser");
+                });
+
             modelBuilder.Entity("TagerCom.Models.Product", b =>
                 {
                     b.HasOne("TagerCom.Models.Category", "Category")
@@ -939,7 +973,9 @@ namespace TagerCom.Migrations
 
                     b.HasOne("TagerCom.Models.Vendor", "Vendor")
                         .WithMany("Products")
-                        .HasForeignKey("VendorId");
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Category");
 
@@ -961,12 +997,15 @@ namespace TagerCom.Migrations
                 {
                     b.HasOne("TagerCom.Models.ApplicationUser", "Customer")
                         .WithMany()
-                        .HasForeignKey("CustomerId1");
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("TagerCom.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("TagerCom.Models.Product", null)
                         .WithMany("Reviews")
@@ -1065,6 +1104,8 @@ namespace TagerCom.Migrations
 
             modelBuilder.Entity("TagerCom.Models.Vendor", b =>
                 {
+                    b.Navigation("Orders");
+
                     b.Navigation("Products");
                 });
 #pragma warning restore 612, 618

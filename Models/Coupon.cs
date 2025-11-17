@@ -11,6 +11,6 @@ namespace TagerCom.Models
         public int UsageLimit { get; set; } = 1;
         public int TimesUsed { get; set; } = 0;
         public bool IsActive { get; set; } = true;
-        public int? VendorId { get; set; } // Optional if coupon is vendor-specific
+        public Guid? VendorId { get; set; } // Optional if coupon is vendor-specific
     }
 }
