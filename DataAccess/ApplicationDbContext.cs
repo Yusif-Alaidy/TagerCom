@@ -34,6 +34,7 @@ namespace TagerCom.DataAccess
         public DbSet<Vendor>            Vendors { get; set; }
         public DbSet<Wallet>            Wallets { get; set; }
 
+        public DbSet<Wishlist> Wishlist { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
