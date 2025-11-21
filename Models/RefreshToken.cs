@@ -2,14 +2,14 @@
 {
     public class RefreshToken
     {
-        public int Id { get; set; }
-        public string Token { get; set; } = string.Empty;
+        public Guid     Id      { get; set; } = Guid.NewGuid();
+        public string   UserId  { get; set; } = string.Empty;
+        public string   Token   { get; set; } = string.Empty;
         public DateTime Expires { get; set; }
-        public bool IsExpired => DateTime.UtcNow >= Expires;
         public DateTime Created { get; set; }
+        public bool     IsExpired => DateTime.UtcNow >= Expires;
 
-        // 👇 Relationship with User
-        public string UserId { get; set; } = string.Empty;
-        public ApplicationUser? User { get; set; }
+        // Navigation
+        public ApplicationUser  User    { get; set; }
     }
 }

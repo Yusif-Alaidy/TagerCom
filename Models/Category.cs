@@ -2,11 +2,11 @@
 {
     public class Category
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = null!;
-        public int? ParentId { get; set; }
+        public Guid     Id          { get; set; } = Guid.NewGuid();
+        public string   Name        { get; set; } = null!;
+        public Guid?    ParentId    { get; set; }
 
-        // Self Relation
+        // Navigation
         public Category? Parent { get; set; }
     }
 }

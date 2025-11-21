@@ -2,11 +2,13 @@
 {
     public class UserOTP
     {
-        public int Id { get; set; }
-        public string ApplicationUserId { get; set; }
-        public ApplicationUser ApplicationUser { get; set; }
-        public string OTPNumber { get; set; }
+        public Guid     Id { get; set; } = Guid.NewGuid();
+        public string   ApplicationUserId { get; set; } = null!;
+        public string   OTPNumber { get; set; } = null!;
         public DateTime ValidTo { get; set; }
-        public bool IsUsed { get; set; } = false;
+        public bool     IsUsed { get; set; } = false;
+
+        // Navigation
+        public ApplicationUser ApplicationUser { get; set; } = null!;
     }
 }

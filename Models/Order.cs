@@ -1,18 +1,20 @@
-﻿namespace TagerCom.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace TagerCom.Models
 {
     public class Order
     {
-        public int Id { get; set; }
-        public string ApplicationUserId { get; set; }
-        public Guid VendorId { get; set; }
-        public string Status { get; set; } = "pending";
-        public decimal TotalAmount { get; set; }
+        public Guid     Id { get; set; } = Guid.NewGuid();
+        public string?  ApplicationUserId { get; set; }
+        public Guid?    VendorId { get; set; }
+        public string   Status { get; set; } = "pending";
+        public decimal  TotalAmount { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation
-
-        public ApplicationUser Customer { get; set; } = null!;
-        public Vendor Vendor { get; set; } = null!;
-        public Payment? Payment { get; set; }
+        public ICollection<OrderItem> OrderItems        { get; set; } = new List<OrderItem>();
+        public ApplicationUser?       ApplicationUser   { get; set; }
+        public Vendor?                Vendor            { get; set; }
+        public Payment?               Payment           { get; set; }
     }
 }

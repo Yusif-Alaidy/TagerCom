@@ -12,29 +12,21 @@ namespace TagerCom.Models
     public class Vendor
     {
 
-        public Guid Id                                  { get; set; }
-
-        // Relation with User
-        public string ApplicationUserId                 { get; set; }
-        public ApplicationUser ApplicationUser          { get; set; }
-
-        // Business Info
-        public string CompanyName                       { get; set; } = null!;
-        public decimal Rating                           { get; set; } = 0m;
-        /// <summary>
-        /// Vendor's revenue share percentage (0.15 = 15%)
-        /// </summary>
-        public decimal RevenueShare                     { get; set; }
-        public bool Approved                            { get; set; } = false;
-        [EnumDataType(typeof(VendorStatus))]
+        public Guid     Id                      { get; set; } = Guid.NewGuid();
+        public string   ApplicationUserId       { get; set; } = string.Empty;
+        public string   CompanyName             { get; set; } = null!;
+        public decimal  Rating                  { get; set; } = 0m;
+        public decimal  RevenueShare            { get; set; } // Vendor's revenue share percentage (0.15 = 15%)
+        public bool     Approved                { get; set; } = false;
+        [EnumDataType(typeof(VendorStatus))]    
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public VendorStatus Status                      { get; set; } = VendorStatus.Pending;
-
-        // Audit Fields
-        public DateTime CreatedAt                       { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt                      { get; set; }
+        public VendorStatus Status              { get; set; } = VendorStatus.Pending;
+        public DateTime  CreatedAt              { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt              { get; set; }
 
         // Navigation
-        public List<Product>? Products                  { get; set; }
+        public ICollection<Product> Products            { get; set; } = new List<Product>();
+        public ICollection<Order>   Orders              { get; set; } = new List<Order>();
+        public ApplicationUser      ApplicationUser     { get; set; } = null!;
     }
 }

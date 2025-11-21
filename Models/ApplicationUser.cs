@@ -5,15 +5,18 @@ namespace TagerCom.Models
 {
     public class ApplicationUser : IdentityUser
     {
-        public string? ProfileImgUrl { get; set; } = "default.jpg";
-        public string? FirstName { get; set; } = string.Empty;
-        public string? LastName { get; set; } = string.Empty;
+        public string?  ProfileImgUrl       { get; set; } = "default.jpg";
+        public string?  FirstName           { get; set; } = string.Empty;
+        public string?  LastName            { get; set; } = string.Empty;
+        public string?  PhoneNumber         { get; set; } = string.Empty;
+        public string?  SecondPhoneNumber   { get; set; } = string.Empty;
 
-        public string? PhoneNumber { get; set; } = string.Empty;
-        public string? SecondPhoneNumber { get; set; } = string.Empty;
-        // Relationships
-        public List<UserAddress> userAddresses { get; set; } = new();
-        public Vendor? Vendor { get; set; }
+        // Navigation
+        public ICollection<UserAddress> userAddresses   { get; set; } = new List<UserAddress>();
+        public ICollection<Review>      Reviews         { get; set; } = new List<Review>();
+        public Cart                     Cart            { get; set; }
+        public ICollection<Order>       Orders          { get; set; } = new List<Order>();
+        public Vendor?                  Vendor          { get; set; }
     }
 
 }
