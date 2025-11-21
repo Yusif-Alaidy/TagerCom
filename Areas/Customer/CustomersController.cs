@@ -1,4 +1,4 @@
-﻿using Azure.Core;
+using Azure.Core;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
