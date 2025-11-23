@@ -54,6 +54,39 @@ namespace TagerCom.Areas.Customer.Controllers
         {
             return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
+        // ----------------------------------------------------
+        // View cart
+        #region GetCart
+        [HttpPost("view")]
+        public async Task<IActionResult> GetCart([FromBody] GetCartRequest request)
+        {
+            var cart = await _cartRepo.GetOneAsync(
+                c => c.ApplicationUserId == request.UserId,
+                new Expression<Func<Cart, object>>[] { c => c.CartItems }
+            );
+
+            if (cart == null)
+                return Ok(new { msg = "Cart is empty", items = new List<object>() });
+
+            var cartItems = await _cartItemRepo.GetAsync(
+                ci => ci.CartId == cart.Id,
+                new Expression<Func<CartItem, object>>[] { ci => ci.Product }
+            );
+
+            var result = cartItems.Select(ci => new
+            {
+                cartItemId = ci.Id,
+                productId = ci.ProductId,
+                productName = ci.Product?.Name,
+                price = ci.Product?.Price,
+                quantity = ci.Quantity,
+                total = ci.Product != null ? ci.Product.Price * ci.Quantity : 0
+            });
+
+            return Ok(result);
+        }
+        #endregion
+
 
         // ----------------------------------------------------
         // Add to cart
@@ -61,38 +94,38 @@ namespace TagerCom.Areas.Customer.Controllers
         // ----------------------------------------------------
         #region AddToCart
         [HttpPost("add")]
-        public async Task<IActionResult> AddToCart(string userId, int productId, int quantity = 1)
+        public async Task<IActionResult> AddToCart([FromBody] AddToCartRequest request)
         {
-            if (quantity <= 0)
+            if (request.Quantity <= 0)
                 return BadRequest(new { msg = "Quantity must be at least 1." });
 
             // Get user's cart
-            var cart = (await _cartRepo.GetAsync(c => c.ApplicationUserId == userId, null))
+            var cart = (await _cartRepo.GetAsync(c => c.ApplicationUserId == request.UserId, null))
                 .FirstOrDefault();
 
             if (cart is null)
             {
-                cart = new Cart { ApplicationUserId = userId };
+                cart = new Cart { ApplicationUserId = request.UserId };
                 await _cartRepo.AddAsync(cart);
                 await _cartRepo.CommitAsync();
             }
 
             // Get product
-            var product = (await _productRepo.GetAsync(p => p.Id == productId, null)).FirstOrDefault();
+            var product = (await _productRepo.GetAsync(p => p.Id == request.ProductId, null)).FirstOrDefault();
 
             if (product is null || !product.IsActive)
                 return NotFound(new { msg = "Product not found or inactive" });
 
-            if (product.Stock < quantity)
+            if (product.Stock < request.Quantity)
                 return BadRequest(new { msg = "Insufficient stock" });
 
             // Check if cart item exists
             var cartItem = (await _cartItemRepo.GetAsync(
-                ci => ci.CartId == cart.Id && ci.ProductId == productId, null)).FirstOrDefault();
+                ci => ci.CartId == cart.Id && ci.ProductId == request.ProductId, null)).FirstOrDefault();
 
             if (cartItem != null)
             {
-                cartItem.Quantity += quantity;
+                cartItem.Quantity += request.Quantity;
                 _cartItemRepo.Update(cartItem);
             }
             else
@@ -100,8 +133,8 @@ namespace TagerCom.Areas.Customer.Controllers
                 await _cartItemRepo.AddAsync(new CartItem
                 {
                     CartId = cart.Id,
-                    ProductId = productId,
-                    Quantity = quantity
+                    ProductId = request.ProductId,
+                    Quantity = request.Quantity
                 });
             }
 
@@ -111,22 +144,23 @@ namespace TagerCom.Areas.Customer.Controllers
         }
         #endregion
 
+
         // ----------------------------------------------------
         // Update cart item
         // ----------------------------------------------------
         #region UpdateCartItem
         [HttpPut("update")]
-        public async Task<IActionResult> UpdateCartItem(int cartItemId, int quantity)
+        public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemRequest request)
         {
             var cartItem = await _cartItemRepo.GetOneAsync(
-                ci => ci.Id == cartItemId,
+                ci => ci.Id == request.CartItemId,
                 new Expression<Func<CartItem, object>>[] { ci => ci.Product });
 
-            if (cartItem is null)
+            if (cartItem == null)
                 return NotFound(new { msg = "Cart item not found." });
 
-            // If quantity = 0 → remove the item
-            if (quantity <= 0)
+            // Remove item if quantity is 0
+            if (request.Quantity <= 0)
             {
                 _cartItemRepo.Delete(cartItem);
                 await _cartItemRepo.CommitAsync();
@@ -134,14 +168,19 @@ namespace TagerCom.Areas.Customer.Controllers
             }
 
             // Check stock
-            if (cartItem.Product.Stock < quantity)
+            if (cartItem.Product.Stock < request.Quantity)
                 return BadRequest(new { msg = $"Not enough stock for {cartItem.Product.Name}." });
 
-            cartItem.Quantity = quantity;
+            cartItem.Quantity = request.Quantity;
             _cartItemRepo.Update(cartItem);
             await _cartItemRepo.CommitAsync();
 
-            return Ok(new { msg = "Cart item updated successfully.", cartItemId, newQuantity = quantity });
+            return Ok(new
+            {
+                msg = "Cart item updated successfully.",
+                cartItemId = request.CartItemId,
+                newQuantity = request.Quantity
+            });
         }
         #endregion
 
@@ -149,12 +188,12 @@ namespace TagerCom.Areas.Customer.Controllers
         // Remove item
         // ----------------------------------------------------
         #region RemoveItem
-        [HttpDelete("remove/{itemId}")]
-        public async Task<IActionResult> RemoveItem(int itemId)
+        [HttpDelete("remove")]
+        public async Task<IActionResult> RemoveItem([FromBody] RemoveCartItemRequest request)
         {
-            var cartItem = await _cartItemRepo.GetOneAsync(ci => ci.Id == itemId);
+            var cartItem = await _cartItemRepo.GetOneAsync(ci => ci.Id == request.CartItemId);
 
-            if (cartItem is null)
+            if (cartItem == null)
                 return NotFound(new { msg = "Cart item not found." });
 
             _cartItemRepo.Delete(cartItem);
@@ -163,6 +202,7 @@ namespace TagerCom.Areas.Customer.Controllers
             return Ok(new { msg = "Item removed successfully." });
         }
         #endregion
+
 
         // ----------------------------------------------------
         // PRIVATE – Apply Coupon (no API endpoint)
@@ -233,36 +273,36 @@ namespace TagerCom.Areas.Customer.Controllers
         #endregion
 
         // ----------------------------------------------------
-        // PRIVATE – Apply points discount (no API endpoint)
+        // PRIVATE – Apply points discount
         // ----------------------------------------------------
-        #region ApplyPointsDiscountAsync
-        public static class PointsSettings
-        {
-            public const decimal CurrencyPerPoint = 0.10m; // 1 point = 0.10
-        }
+        //#region ApplyPointsDiscountAsync
+        //public static class PointsSettings
+        //{
+        //    public const decimal CurrencyPerPoint = 0.10m; // 1 point = 0.10
+        //}
 
-        private async Task<decimal> ApplyPointsDiscountAsync(string userId, int pointsRequested)
-        {
-            if (pointsRequested <= 0)
-                return 0;
+        //private async Task<decimal> ApplyPointsDiscountAsync(string userId, int pointsRequested)
+        //{
+        //    if (pointsRequested <= 0)
+        //        return 0;
 
-            var points = await _pointsRepo.GetOneAsync(p => p.ApplicationUserId == userId);
+        //    var points = await _pointsRepo.GetOneAsync(p => p.ApplicationUserId == userId);
 
-            if (points == null || points.TotalPoints <= 0)
-                return 0;
+        //    if (points == null || points.TotalPoints <= 0)
+        //        return 0;
 
-            int pointsToUse = Math.Min(pointsRequested, points.TotalPoints);
-            decimal discount = pointsToUse * PointsSettings.CurrencyPerPoint;
+        //    int pointsToUse = Math.Min(pointsRequested, points.TotalPoints);
+        //    decimal discount = pointsToUse * PointsSettings.CurrencyPerPoint;
 
-            points.TotalPoints -= pointsToUse;
-            points.LastUpdated = DateTime.UtcNow;
+        //    points.TotalPoints -= pointsToUse;
+        //    points.LastUpdated = DateTime.UtcNow;
 
-            _pointsRepo.Update(points);
-            await _pointsRepo.CommitAsync();
+        //    _pointsRepo.Update(points);
+        //    await _pointsRepo.CommitAsync();
 
-            return discount;
-        }
-        #endregion
+        //    return discount;
+        //}
+        //#endregion
 
         // ----------------------------------------------------
         // Checkout – single atomic operation
@@ -327,10 +367,10 @@ namespace TagerCom.Areas.Customer.Controllers
                     }
 
                     // ----- Points -----
-                    pointsDiscount = await ApplyPointsDiscountAsync(userId, request.PointsToUse);
+                    //pointsDiscount = await ApplyPointsDiscountAsync(userId, request.PointsToUse);
 
                     // Final total
-                    decimal finalTotal = cartTotal - couponDiscount - pointsDiscount;
+                    decimal finalTotal = cartTotal - couponDiscount;// - pointsDiscount;
                     if (finalTotal < 0) finalTotal = 0;
 
                     // Deduct stock
