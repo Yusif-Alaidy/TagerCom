@@ -16,23 +16,24 @@ namespace TagerCom.DataAccess
     : base(options)
         { }
 
-        public DbSet<RefreshToken>      RefreshTokens { get; set; }
-        public DbSet<UserOTP>           UserOTPs { get; set; }
-        public DbSet<ApplicationUser>   ApplicationUsers { get; set; }
-        public DbSet<Cart>              Carts { get; set; }
-        public DbSet<CartItem>          CartItems { get; set; }
-        public DbSet<Category>          Categories { get; set; }
-        public DbSet<Notification>      Notifications { get; set; }
-        public DbSet<Order>             Orders { get; set; }
-        public DbSet<OrderItem>         OrderItems { get; set; }
-        public DbSet<Payment>           Payments { get; set; }
-        public DbSet<Product>           Products { get; set; }
-        public DbSet<Review>            Reviews { get; set; }
-        public DbSet<Ticket>            Tickets { get; set; }
-        public DbSet<Transaction>       Transactions { get; set; }
-        public DbSet<UserAddress>       UserAddress { get; set; }
-        public DbSet<Vendor>            Vendors { get; set; }
-        public DbSet<Wallet>            Wallets { get; set; }
+        public DbSet<Brand>             Brands              { get; set; }
+        public DbSet<RefreshToken>      RefreshTokens       { get; set; }
+        public DbSet<UserOTP>           UserOTPs            { get; set; }
+        public DbSet<ApplicationUser>   ApplicationUsers    { get; set; }
+        public DbSet<Cart>              Carts               { get; set; }
+        public DbSet<CartItem>          CartItems           { get; set; }
+        public DbSet<Category>          Categories          { get; set; }
+        public DbSet<Notification>      Notifications       { get; set; }
+        public DbSet<Order>             Orders              { get; set; }
+        public DbSet<OrderItem>         OrderItems          { get; set; }
+        public DbSet<Payment>           Payments            { get; set; }
+        public DbSet<Product>           Products            { get; set; }
+        public DbSet<Review>            Reviews             { get; set; }
+        public DbSet<Ticket>            Tickets             { get; set; }
+        public DbSet<Transaction>       Transactions        { get; set; }
+        public DbSet<UserAddress>       UserAddress         { get; set; }
+        public DbSet<Store>             Stores              { get; set; }
+        public DbSet<Wallet>            Wallets             { get; set; }
 
         public DbSet<Wishlist> Wishlist { get; set; }
 
@@ -68,7 +69,7 @@ namespace TagerCom.DataAccess
 
             
             builder.Entity<Product>()
-                .HasIndex(e => e.VendorId);
+                .HasIndex(e => e.StoreId);
 
             builder.Entity<Product>()
                 .HasIndex(e => e.CategoryId);
@@ -77,7 +78,7 @@ namespace TagerCom.DataAccess
                 .HasIndex(e => e.ApplicationUserId);
 
             builder.Entity<Order>()
-                .HasIndex(e => e.VendorId);
+                .HasIndex(e => e.StoreId);
 
             builder.Entity<OrderItem>()
                 .HasIndex(e => e.ProductId);
@@ -107,6 +108,27 @@ namespace TagerCom.DataAccess
                 .WithMany(u => u.userAddresses)
                 .HasForeignKey(ua => ua.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+
+            // ============================================
+            // ============================================
+            // ApplicationUser → UserAddress (One-to-Many)
+            // ============================================
+            builder.Entity<Category>()
+                .HasOne(ua => ua.Parent)
+                .WithMany(u => u.Chiled)
+                .HasForeignKey(ua => ua.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // ============================================
+            // Brand → Product (One-to-Many)
+            // ============================================
+            builder.Entity<Product>()
+                .HasOne(ua => ua.Brand)
+                .WithMany(u => u.Products)
+                .HasForeignKey(ua => ua.BrandId)
+                .OnDelete(DeleteBehavior.Restrict);
 
 
             // ============================================
@@ -142,10 +164,10 @@ namespace TagerCom.DataAccess
             // ============================================
             // ApplicationUser → Vendor (One-to-One)
             // ============================================
-            builder.Entity<Vendor>()
+            builder.Entity<Store>()
                 .HasOne(v => v.ApplicationUser)
-                .WithOne(u => u.Vendor)
-                .HasForeignKey<Vendor>(v => v.ApplicationUserId)
+                .WithOne(u => u.Store)
+                .HasForeignKey<Store>(v => v.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
 
@@ -153,9 +175,9 @@ namespace TagerCom.DataAccess
             // Vendor → Product (One-to-Many)
             // ============================================
             builder.Entity<Product>()
-                .HasOne(p => p.Vendor)
+                .HasOne(p => p.Store)
                 .WithMany(v => v.Products)
-                .HasForeignKey(p => p.VendorId)
+                .HasForeignKey(p => p.StoreId)
                 .OnDelete(DeleteBehavior.Restrict);
 
 
@@ -163,10 +185,10 @@ namespace TagerCom.DataAccess
             // Vendor → Order (One-to-Many)
             // ============================================
             builder.Entity<Order>()
-                .HasOne(o => o.Vendor)
+                .HasOne(o => o.Store)
                 .WithMany(v => v.Orders)
-                .HasForeignKey(o => o.VendorId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .HasForeignKey(o => o.StoreId)
+                .OnDelete(DeleteBehavior.Restrict);
 
 
             // ============================================
@@ -196,7 +218,7 @@ namespace TagerCom.DataAccess
                 .HasOne(p => p.Category)
                 .WithMany()
                 .HasForeignKey(p => p.CategoryId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Restrict);
 
 
             // ============================================
@@ -236,7 +258,7 @@ namespace TagerCom.DataAccess
                 .IsUnique();
 
             // Ensure unique vendor per user
-            builder.Entity<Vendor>()
+            builder.Entity<Store>()
                 .HasIndex(v => v.ApplicationUserId)
                 .IsUnique();
 
@@ -257,11 +279,11 @@ namespace TagerCom.DataAccess
                 .Property(ci => ci.PriceAtAddTime)
                 .HasPrecision(18, 2);
 
-            builder.Entity<Vendor>()
+            builder.Entity<Store>()
                 .Property(v => v.Rating)
                 .HasPrecision(3, 2);
 
-            builder.Entity<Vendor>()
+            builder.Entity<Store>()
                 .Property(v => v.RevenueShare)
                 .HasPrecision(5, 4);
             // ============================================

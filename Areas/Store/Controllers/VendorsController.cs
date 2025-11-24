@@ -13,11 +13,11 @@ namespace TagerCom.Areas.Store.Controllers
         #region Fields
         public UserManager<ApplicationUser> userManager { get; }
         public IRepository<UserAddress> userAddress { get; }
-        public IRepository<Vendor> VendoreRepsitory { get; }
+        public IRepository<Models.Store> VendoreRepsitory { get; }
         #endregion
 
         #region Constructore
-        public VendorsController(UserManager<ApplicationUser> userManager, IRepository<UserAddress> userAddress, IRepository<Vendor> vendoreRepsitory)
+        public VendorsController(UserManager<ApplicationUser> userManager, IRepository<UserAddress> userAddress, IRepository<Models.Store> vendoreRepsitory)
         {
             this.userManager = userManager;
             this.userAddress = userAddress;
@@ -45,12 +45,12 @@ namespace TagerCom.Areas.Store.Controllers
 
 
             // Create new vendor for this user and change status  ---------
-            var vendor = new Vendor()
+            var vendor = new Models.Store()
             {
                 ApplicationUserId = user.Id,
-                CompanyName = request.CompanyName,
+                StoreName = request.CompanyName,
                 CreatedAt = DateTime.UtcNow,
-                Status = VendorStatus.Pending,
+                Status = StoreStatus.Pending,
             };
             await VendoreRepsitory.AddAsync(vendor);
             await VendoreRepsitory.CommitAsync();

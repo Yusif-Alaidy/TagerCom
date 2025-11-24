@@ -7,6 +7,7 @@
         public Guid?    ParentId    { get; set; }
 
         // Navigation
-        public Category? Parent { get; set; }
+        public Category?                Parent { get; set; }
+        public ICollection<Category>    Chiled { get; set; } = new List<Category>(); 
     }
 }
