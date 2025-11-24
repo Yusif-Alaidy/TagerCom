@@ -3,24 +3,24 @@ using System.Text.Json.Serialization;
 
 namespace TagerCom.Models
 {
-    public enum VendorStatus
+    public enum StoreStatus
     {
         Pending = 0,
         Approved = 1,
         Rejected = 2
     }
-    public class Vendor
+    public class Store
     {
 
         public Guid     Id                      { get; set; } = Guid.NewGuid();
         public string   ApplicationUserId       { get; set; } = string.Empty;
-        public string   CompanyName             { get; set; } = null!;
+        public string   StoreName               { get; set; } = null!;
         public decimal  Rating                  { get; set; } = 0m;
-        public decimal  RevenueShare            { get; set; } // Vendor's revenue share percentage (0.15 = 15%)
-        public bool     Approved                { get; set; } = false;
-        [EnumDataType(typeof(VendorStatus))]    
+        public int      RevenueShare            { get; set; } = 15; // Vendor's revenue share percentage (0.15 = 15%)
+        public bool     IsActive                { get; set; } = false;
+        [EnumDataType(typeof(StoreStatus))]    
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public VendorStatus Status              { get; set; } = VendorStatus.Pending;
+        public StoreStatus Status              { get; set; } = StoreStatus.Pending;
         public DateTime  CreatedAt              { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt              { get; set; }
 

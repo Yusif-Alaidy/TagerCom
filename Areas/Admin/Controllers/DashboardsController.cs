@@ -11,12 +11,12 @@ namespace TagerCom.Areas.Admin.Controllers
     public class DashboardsController : ControllerBase
     {
         #region Fields
-        public IRepository<Vendor> Vendor { get; }
+        public IRepository<Models.Store> Vendor { get; }
         public UserManager<ApplicationUser> UserManager { get; }
         #endregion
 
         #region Constructore
-        public DashboardsController(IRepository<Vendor> vendor, UserManager<ApplicationUser> userManager)
+        public DashboardsController(IRepository<Models.Store> vendor, UserManager<ApplicationUser> userManager)
         {
             this.Vendor = vendor;
             this.UserManager = userManager;
@@ -56,7 +56,7 @@ namespace TagerCom.Areas.Admin.Controllers
             }
             if (filter.StoreName != null)
             {
-                PendingVendors = await Vendor.GetAsync(e => e.CompanyName.Contains(filter.StoreName));
+                PendingVendors = await Vendor.GetAsync(e => e.StoreName.Contains(filter.StoreName));
             }
             // ----------------------------------------------------------------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ namespace TagerCom.Areas.Admin.Controllers
                 vendoreId           = e.Id,
                 Username            = e.ApplicationUser.UserName!,
                 Email               = e.ApplicationUser.Email!,
-                StoreName           = e.CompanyName,
+                StoreName           = e.StoreName,
                 phoneNumber         = e.ApplicationUser.PhoneNumber!,
                 SecondPhoneNumber   = e.ApplicationUser.SecondPhoneNumber,
                 CreatedAt           = e.CreatedAt,
@@ -115,7 +115,7 @@ namespace TagerCom.Areas.Admin.Controllers
             // Approved --------------------------------------------
             if (request.ApprovedOrRejected.ToString() == "Approved")
             {
-                pendingVendor.Status = VendorStatus.Approved;
+                pendingVendor.Status = StoreStatus.Approved;
                 await UserManager.AddToRoleAsync(pendingVendor.ApplicationUser, "Vendor");
                 return Ok(new
                 {
@@ -129,7 +129,7 @@ namespace TagerCom.Areas.Admin.Controllers
             // Rejected --------------------------------------------
             if (request.ApprovedOrRejected.ToString() == "Rejected")
             {
-                pendingVendor.Status = VendorStatus.Rejected;
+                pendingVendor.Status = StoreStatus.Rejected;
                 return Ok(new
                 {
                     msg = "Sorry your store is rejected mybe you can try again"

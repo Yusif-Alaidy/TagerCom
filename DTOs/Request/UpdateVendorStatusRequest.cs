@@ -8,8 +8,8 @@ namespace TagerCom.DTOs.Request
         [Required]
         public Guid? VendorId { get; set; }
         [Required]
-        [EnumDataType(typeof(VendorStatus))]
+        [EnumDataType(typeof(StoreStatus))]
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public VendorStatus? ApprovedOrRejected { get; set; }
+        public StoreStatus? ApprovedOrRejected { get; set; }
     }
 }
