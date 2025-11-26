@@ -19,6 +19,7 @@ namespace TagerCom.Models
         // Navigation
         public ICollection<Review>    Reviews    { get; set; } = new List<Review>();
         public ICollection<CartItem>  CartItems  { get; set; } = new List<CartItem>();
+        public ICollection<OrderItem>  OrderItems { get; set; } = new List<OrderItem>();
         public Store                  Store      { get; set; }
         public Category               Category   { get; set; } = null!;
         public Brand                  Brand      { get; set; } = null!;
