@@ -59,7 +59,7 @@ namespace TagerCom.Areas.Customer.Controllers
                     Products = request.descending == true ? Products.OrderByDescending(e => e.CreatedAt).ToList() : Products.OrderBy(e => e.CreatedAt).ToList();
                     break;
                 case "rate":
-                    Products = request.descending == true ? Products.OrderByDescending(e => e.Rate).ToList() : Products.OrderBy(e => e.Rate).ToList();
+                    Products = request.descending == true ? Products.OrderByDescending(e => e.Reviews).ToList() : Products.OrderBy(e => e.Reviews).ToList();
                     break;
                 default:
                     // Default sorting: Newest first
@@ -79,7 +79,7 @@ namespace TagerCom.Areas.Customer.Controllers
             {
                 Id          = e.Id,
                 Name        = e.Name,
-                VendorId    = e.VendorId,
+                VendorId    = e.StoreId,
                 CategoryId  = e.CategoryId,
                 Description = e.Description,
                 Price       = e.Price,
@@ -106,8 +106,8 @@ namespace TagerCom.Areas.Customer.Controllers
         #endregion
 
         #region Get By Id
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetOne(int id)
+        [HttpGet("id")]
+        public async Task<IActionResult> GetOne(Guid id)
         {
             // Get the Product ---------------------------
             var Product = await ProductRepo.GetOneAsync(e => e.Id == id, includes:[e=> e.Reviews]);
@@ -124,7 +124,7 @@ namespace TagerCom.Areas.Customer.Controllers
             {
                 Id          = Product.Id,
                 Name        = Product.Name,
-                VendorId    = Product.VendorId,
+                VendorId    = Product.StoreId,
                 CategoryId  = Product.CategoryId,
                 Description = Product.Description,
                 Price       = Product.Price,
@@ -152,8 +152,8 @@ namespace TagerCom.Areas.Customer.Controllers
         #endregion
 
         #region Get Similar Product
-        [HttpGet("similar/{id:int}")]
-        public async Task<IActionResult> GetSimilar(int id) 
+        [HttpGet("similar/{id}")]
+        public async Task<IActionResult> GetSimilar(Guid id) 
         {
             // Get Product -------------------------------------------
             var Product = await ProductRepo.GetOneAsync(e=>e.Id == id);
@@ -173,7 +173,7 @@ namespace TagerCom.Areas.Customer.Controllers
             {
                 Id          = e.Id,
                 Name        = e.Name,
-                VendorId    = e.VendorId,
+                VendorId    = e.StoreId,
                 CategoryId  = e.CategoryId,
                 Description = e.Description,
                 Price       = e.Price,
@@ -206,7 +206,7 @@ namespace TagerCom.Areas.Customer.Controllers
                 {
                     p.Id,
                     p.Name,
-                    p.VendorId,
+                    p.StoreId,
                     p.CategoryId,
                     p.Description,
                     p.Price,
@@ -225,7 +225,7 @@ namespace TagerCom.Areas.Customer.Controllers
             {
                 Id          = e.Id,
                 Name        = e.Name,
-                VendorId    = e.VendorId,
+                VendorId    = e.StoreId,
                 CategoryId  = e.CategoryId,
                 Description = e.Description,
                 Price       = e.Price,

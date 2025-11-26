@@ -108,11 +108,12 @@ namespace TagerCom.Area.Identity.Controller
             context.SaveChanges();
 
             var roles = await userManager.GetRolesAsync(user);
+            
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.UserName)
+                new Claim(ClaimTypes.Email, user.Email!),
+                new Claim(ClaimTypes.Name, user.UserName!)
             };
             foreach (var role in roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));
@@ -158,8 +159,8 @@ namespace TagerCom.Area.Identity.Controller
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.UserName)
+                new Claim(ClaimTypes.Email, user.Email!),
+                new Claim(ClaimTypes.Name, user.UserName!)
             };
             foreach (var role in roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));
@@ -217,7 +218,7 @@ namespace TagerCom.Area.Identity.Controller
             {
                 await userOTP.DeleteRangeAsync(oldOTP);
             }
-            userOTP.CommitAsync();
+            await userOTP.CommitAsync();
             // ------------------------------------------------------------------------------------------------
 
             // ### Creat OTPs and Send it to the user email ------------------------------------------------------------------------------------
@@ -266,7 +267,7 @@ namespace TagerCom.Area.Identity.Controller
                 return BadRequest(new { msg = "Expired OTP" });
             OTP.IsUsed = true;
             //context.SaveChanges();
-            userOTP.CommitAsync();
+            await userOTP.CommitAsync();
             // -----------------------------------------------------------------------------------
 
             var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/NewPassword";

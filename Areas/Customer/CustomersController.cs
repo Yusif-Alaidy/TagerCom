@@ -18,7 +18,6 @@ namespace TagerCom.Areas.Customer
         private readonly IRepository<Product> _productRepo;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IRepository<Wishlist> _wishlistRepository;
-        private readonly IRepository<UserAddress> _userAddress;
 
 
         public CustomersController(IRepository<Favorite> favoriteRepo,
@@ -38,7 +37,7 @@ namespace TagerCom.Areas.Customer
         {
             var user = await _userManager.GetUserAsync(User);
 
-            var favorites = _favoriteRepository.Query().Where(f => f.ApplicationUserId == user.Id)
+            var favorites = _favoriteRepository.Query().Where(f => f.ApplicationUserId == user!.Id)
 
                 //new FavoriteResponseDTO بسجل القيم اللي فيه بس كده 
                 .Select(f => new FavoriteResponseDTO
@@ -123,13 +122,13 @@ namespace TagerCom.Areas.Customer
         }
 
         [Authorize(Roles = "Customer")]
-        [HttpDelete("RemoveFromFavorites/{productId:int}")]
-        public async Task<IActionResult> RemoveFromFavorites(int productId)
+        [HttpDelete("RemoveFromFavorites/{productId}")]
+        public async Task<IActionResult> RemoveFromFavorites(Guid productId)
         {
             var user = await _userManager.GetUserAsync(User);
 
             var favorite = _favoriteRepository.Query()
-                .FirstOrDefault(f => f.ApplicationUserId == user.Id && f.ProductId == productId);
+                .FirstOrDefault(f => f.ApplicationUserId == user!.Id && f.ProductId == productId);
 
             if (favorite == null)
                 return NotFound(new { message = "Product not found in favorites." });

@@ -12,18 +12,15 @@ namespace TagerCom.Models
         [Required]
         [StringLength(450)]
 
-        public string ApplicationUserId { get; set; }
+        public string ApplicationUserId { get; set; } = string.Empty;
 
         [Required]
-        public int ProductId { get; set; }
+        public Guid ProductId     { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
-        [ForeignKey(nameof(ApplicationUserId))]
-        public ApplicationUser User { get; set; }
-
-        [ForeignKey(nameof(ProductId))]
-        public Product Product { get; set; }
+        public ApplicationUser User     { get; set; } = null!;
+        public Product         Product  { get; set; } = null!;
     }
 }
