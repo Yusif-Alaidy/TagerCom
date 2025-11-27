@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic;
 using System.Linq.Expressions;
 using TagerCom.Models;
-namespace TagerCom.Areas.Customer
+namespace TagerCom.Areas.Customer.Controllers
 {
     [Route("api/Customer/[controller]")]
     [ApiController]

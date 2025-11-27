@@ -57,7 +57,7 @@ namespace TagerCom.Area.Identity.Controller
             };
 
             var result = await userManager.CreateAsync(applicationUser, registerDTO.Password);
-
+            await userManager.AddToRoleAsync(applicationUser, "Customer");
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 

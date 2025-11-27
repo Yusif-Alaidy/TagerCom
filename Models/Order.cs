@@ -47,4 +47,6 @@ namespace TagerCom.Models
         public Store                            Store           { get; set; } = null!;
         public Payment?                         Payment         { get; set; }
     }
+
+
 }

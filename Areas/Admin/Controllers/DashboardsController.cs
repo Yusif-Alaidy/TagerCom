@@ -38,7 +38,7 @@ namespace TagerCom.Areas.Admin.Controllers
 
 
             // 2. Apply filtering by Username, Email, PhoneNumber, or StoreName -------------------------------------------------------
-            if (filter.username != null)
+            if (filter!.username != null)
             {
                 PendingVendors = await Vendor.GetAsync(e => e.ApplicationUser.UserName!.Contains(filter.username));
             }

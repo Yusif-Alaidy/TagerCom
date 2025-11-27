@@ -118,7 +118,7 @@ namespace TagerCom.Area.Identity.Controller
             // Map request data to UserAddress model -------------------------------------------------
             var address = new UserAddress
             {
-                ApplicationUserId = user.Id,
+                ApplicationUserId = user!.Id,
                 Label = request.Label,
                 Country = request.Country,
                 City = request.City,

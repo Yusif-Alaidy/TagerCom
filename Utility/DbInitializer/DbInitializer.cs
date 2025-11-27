@@ -75,7 +75,7 @@ namespace TagerCom.Utility.DbInitializer
                     }, "Admin@123").GetAwaiter().GetResult();
 
                     var user = UserManger.FindByEmailAsync("Admin@gmail.com").GetAwaiter().GetResult();
-                    user.EmailConfirmed = true;
+                    user!.EmailConfirmed = true;
 
                     if (user is not null)
                         UserManger.AddToRoleAsync(user, "Admin").GetAwaiter().GetResult();
@@ -198,29 +198,29 @@ namespace TagerCom.Utility.DbInitializer
                         UserManger.AddToRoleAsync(vendor3_result, "Vendor").GetAwaiter().GetResult();
 
                     // Seed Stores
-                    repoStore.AddAsync(new Store { ApplicationUserId = vendor1_result.Id, StoreName = "Amazon_store", IsActive = true, Status = StoreStatus.Approved }).GetAwaiter().GetResult();
-                    repoStore.AddAsync(new Store { ApplicationUserId = vendor2_result.Id, StoreName = "Yusif_store",  IsActive = true, Status = StoreStatus.Approved }).GetAwaiter().GetResult();
-                    repoStore.AddAsync(new Store { ApplicationUserId = vendor3_result.Id, StoreName = "Noon_store",   IsActive = true, Status = StoreStatus.Approved }).GetAwaiter().GetResult();
+                    repoStore.AddAsync(new Store { ApplicationUserId = vendor1_result!.Id, StoreName = "Amazon_store", IsActive = true, Status = StoreStatus.Approved }).GetAwaiter().GetResult();
+                    repoStore.AddAsync(new Store { ApplicationUserId = vendor2_result!.Id, StoreName = "Yusif_store",  IsActive = true, Status = StoreStatus.Approved }).GetAwaiter().GetResult();
+                    repoStore.AddAsync(new Store { ApplicationUserId = vendor3_result!.Id, StoreName = "Noon_store",   IsActive = true, Status = StoreStatus.Approved }).GetAwaiter().GetResult();
                     repoStore.CommitAsync().GetAwaiter().GetResult(); 
                     var store  = repoStore.GetOneAsync(e => e.StoreName == "Amazon_store").GetAwaiter().GetResult();
                     var store2 = repoStore.GetOneAsync(e => e.StoreName == "Yusif_store").GetAwaiter().GetResult();
                     var store3 = repoStore.GetOneAsync(e => e.StoreName == "Noon_store").GetAwaiter().GetResult();
 
                     // Seed Product
-                    repoProduct.AddAsync(new Product { Name = "Iphone 16",            StoreId = store.Id,  CategoryId = Mobiles.Id,             BrandId = Apple.Id,   Description = "This Description", Price = 16000.40m, Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "Laptop Hp Victus 15",  StoreId = store.Id,  CategoryId = Laptops.Id,             BrandId = Hp.Id,      Description = "This Description", Price = 32000.40m, Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "iPhone Charger",       StoreId = store.Id,  CategoryId = Laptop__accessories.Id, BrandId = Apple.Id,   Description = "This Description", Price = 1000.40m,  Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "Laptop Charger",       StoreId = store.Id,  CategoryId = Mobile__accessories.Id, BrandId = Hp.Id,      Description = "This Description", Price = 1800.40m,  Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Iphone 16",            StoreId = store!.Id, CategoryId = Mobiles!.Id,             BrandId = Apple!.Id,   Description = "This Description", Price = 16000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Laptop Hp Victus 15",  StoreId = store.Id,  CategoryId = Laptops!.Id,             BrandId = Hp!.Id,      Description = "This Description", Price = 32000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "iPhone Charger",       StoreId = store.Id,  CategoryId = Laptop__accessories!.Id, BrandId = Apple.Id,    Description = "This Description", Price = 1000.40m,  Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Laptop Charger",       StoreId = store.Id,  CategoryId = Mobile__accessories!.Id, BrandId = Hp.Id,       Description = "This Description", Price = 1800.40m,  Stock = 50 }).GetAwaiter().GetResult();
                     
-                    repoProduct.AddAsync(new Product { Name = "Iphone 11",            StoreId = store2.Id, CategoryId = Mobiles.Id,             BrandId = Apple.Id,   Description = "This Description", Price = 9000.40m,  Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "samsung a11",          StoreId = store2.Id, CategoryId = Mobiles.Id,             BrandId = Samsung.Id, Description = "This Description", Price = 7000.40m,  Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "canone m50",           StoreId = store2.Id, CategoryId = Camera.Id,              BrandId = Cannon.Id,  Description = "This Description", Price = 35000.40m, Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "samsung tv",           StoreId = store2.Id, CategoryId = TV_Display.Id,          BrandId = Samsung.Id, Description = "This Description", Price = 61000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Iphone 11",            StoreId = store2!.Id, CategoryId = Mobiles.Id,             BrandId = Apple.Id,    Description = "This Description", Price = 9000.40m,  Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "samsung a11",          StoreId = store2.Id,  CategoryId = Mobiles.Id,             BrandId = Samsung!.Id, Description = "This Description", Price = 7000.40m,  Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "canone m50",           StoreId = store2.Id,  CategoryId = Camera!.Id,             BrandId = Cannon!.Id,  Description = "This Description", Price = 35000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "samsung tv",           StoreId = store2.Id,  CategoryId = TV_Display!.Id,         BrandId = Samsung.Id,  Description = "This Description", Price = 61000.40m, Stock = 50 }).GetAwaiter().GetResult();
 
-                    repoProduct.AddAsync(new Product { Name = "Oppo F12",             StoreId = store3.Id, CategoryId = Mobiles.Id,             BrandId = Oppo.Id,    Description = "This Description", Price = 18000.40m, Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "Samsung Taplet",       StoreId = store3.Id, CategoryId = Tablets.Id,             BrandId = Samsung.Id, Description = "This Description", Price = 23000.40m, Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "Ipad pro 6",           StoreId = store3.Id, CategoryId = Tablets.Id,             BrandId = Apple.Id,   Description = "This Description", Price = 15000.40m, Stock = 50 }).GetAwaiter().GetResult();
-                    repoProduct.AddAsync(new Product { Name = "Iphone 16",            StoreId = store3.Id, CategoryId = Mobiles.Id,             BrandId = Apple.Id,   Description = "This Description", Price = 83000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Oppo F12",             StoreId = store3!.Id, CategoryId = Mobiles.Id,             BrandId = Oppo!.Id,    Description = "This Description", Price = 18000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Samsung Taplet",       StoreId = store3.Id,  CategoryId = Tablets!.Id,            BrandId = Samsung.Id,  Description = "This Description", Price = 23000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Ipad pro 6",           StoreId = store3.Id,  CategoryId = Tablets.Id,             BrandId = Apple.Id,    Description = "This Description", Price = 15000.40m, Stock = 50 }).GetAwaiter().GetResult();
+                    repoProduct.AddAsync(new Product { Name = "Iphone 16",            StoreId = store3.Id,  CategoryId = Mobiles.Id,             BrandId = Apple.Id,    Description = "This Description", Price = 83000.40m, Stock = 50 }).GetAwaiter().GetResult();
                     repoProduct.CommitAsync().GetAwaiter().GetResult();
 
                     var product1 = repoProduct.GetOneAsync(e=>e.Name == "Iphone 16").GetAwaiter().GetResult();
@@ -230,17 +230,17 @@ namespace TagerCom.Utility.DbInitializer
                     var product5 = repoProduct.GetOneAsync(e=>e.Name == "Oppo F12").GetAwaiter().GetResult();
 
                     // Seed Carts
-                    repoCart.AddAsync(new Cart { UserId = user1_result.Id}).GetAwaiter().GetResult();
+                    repoCart.AddAsync(new Cart { UserId = user1_result!.Id}).GetAwaiter().GetResult();
                     repoCart.CommitAsync().GetAwaiter().GetResult();
                     var cart1 = repoCart.GetOneAsync(e => e.UserId == user1_result.Id).GetAwaiter().GetResult();
-                    repoCartItem.AddAsync(new CartItem { CartId = cart1.Id, ProductId = product1.Id, PriceAtAddTime = product1.Price, Quantity = 5} );
-                    repoCartItem.AddAsync(new CartItem { CartId = cart1.Id, ProductId = product4.Id, PriceAtAddTime = product4.Price, Quantity = 5} );
+                    repoCartItem.AddAsync(new CartItem { CartId = cart1!.Id, ProductId = product1!.Id, PriceAtAddTime = product1.Price, Quantity = 5} );
+                    repoCartItem.AddAsync(new CartItem { CartId = cart1.Id, ProductId = product4!.Id, PriceAtAddTime = product4.Price, Quantity = 5} );
 
-                    repoCart.AddAsync(new Cart { UserId = user2_result.Id }).GetAwaiter().GetResult();
+                    repoCart.AddAsync(new Cart { UserId = user2_result!.Id }).GetAwaiter().GetResult();
                     repoCart.CommitAsync().GetAwaiter().GetResult();
                     var cart2 = repoCart.GetOneAsync(e => e.UserId == user2_result.Id).GetAwaiter().GetResult();
-                    repoCartItem.AddAsync(new CartItem { CartId = cart2.Id, ProductId = product2.Id, PriceAtAddTime = product2.Price, Quantity = 5 });
-                    repoCartItem.AddAsync(new CartItem { CartId = cart2.Id, ProductId = product5.Id, PriceAtAddTime = product5.Price, Quantity = 5 });
+                    repoCartItem.AddAsync(new CartItem { CartId = cart2!.Id, ProductId = product2!.Id, PriceAtAddTime = product2.Price, Quantity = 5 });
+                    repoCartItem.AddAsync(new CartItem { CartId = cart2.Id,  ProductId = product5!.Id, PriceAtAddTime = product5.Price, Quantity = 5 });
                     repoCartItem.CommitAsync().GetAwaiter().GetResult();
 
                     // Seed Order
@@ -248,16 +248,16 @@ namespace TagerCom.Utility.DbInitializer
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
                     var order1 = repoOrder.GetOneAsync(e => e.ApplicationUserId == user1_result.Id).GetAwaiter().GetResult();
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price});
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price});
                     repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price});
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price});
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product3!.Id, Quantity = 3, Price = product3.Price});
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
                     repoOrder.AddAsync(new Order { ApplicationUserId = user2_result.Id, StoreId = store2.Id, }).GetAwaiter().GetResult();
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
                     var order2 = repoOrder.GetOneAsync(e => e.ApplicationUserId == user2_result.Id).GetAwaiter().GetResult();
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price });
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price });
                     repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price });
                     repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price });
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
