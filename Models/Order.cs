@@ -41,9 +41,10 @@ namespace TagerCom.Models
         public DateTime      CreatedAt           { get; set; } = DateTime.UtcNow;
 
         // Navigation
-        public ICollection<OrderItem> OrderItems        { get; set; } = new List<OrderItem>();
-        public ApplicationUser        ApplicationUser   { get; set; }
-        public Store                  Store             { get; set; }
-        public Payment?               Payment           { get; set; }
+        public ICollection<OrderItem>           OrderItems      { get; set; } = new List<OrderItem>();
+        public ICollection<OrderStatusHistory>  StatusHistory   { get; set; } = new List<OrderStatusHistory>();
+        public ApplicationUser                  ApplicationUser { get; set; } = null!;
+        public Store                            Store           { get; set; } = null!;
+        public Payment?                         Payment         { get; set; }
     }
 }
