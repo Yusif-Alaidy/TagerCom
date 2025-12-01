@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.IdentityModel.Tokens;
+using System.Threading.Tasks;
 using TagerCom.DataAccess;
 using TagerCom.Utility.DbInitalizer;
 
@@ -22,11 +23,31 @@ namespace TagerCom.Utility.DbInitializer
         private readonly IRepository<CartItem> repoCartItem;
         private readonly IRepository<Order> repoOrder;
         private readonly IRepository<OrderItem> repoOrderItem;
+        private readonly IRepository<Review> repoReview;
+        private readonly IRepository<UserAddress> repoAddress;
+        private readonly IRepository<Wallet> repoWallet;
 
         #endregion
 
         #region Constructore
-        public DbInitializer(ApplicationDbContext Context, UserManager<ApplicationUser> UserManger, RoleManager<IdentityRole> RoleManger, ILogger<DbInitializer> logger, IRepository<Category> RepoCategory, IRepository<Brand> RepoBrand, IRepository<Product> RepoProduct, IRepository<Store> RepoStore, IRepository<Cart> RepoCart, IRepository<CartItem> RepoCartItem, IRepository<Order> RepoOrder, IRepository<OrderItem> RepoOrderItem)
+        public DbInitializer
+            (
+            ApplicationDbContext            Context,
+            UserManager<ApplicationUser>    UserManger,
+            RoleManager<IdentityRole>       RoleManger,
+            ILogger<DbInitializer>          logger,
+            IRepository<Category>           RepoCategory,
+            IRepository<Brand>              RepoBrand,
+            IRepository<Product>            RepoProduct,
+            IRepository<Store>              RepoStore,
+            IRepository<Cart>               RepoCart,
+            IRepository<CartItem>           RepoCartItem,
+            IRepository<Order>              RepoOrder, 
+            IRepository<OrderItem>          RepoOrderItem,
+            IRepository<Review>             RepoReview,
+            IRepository<UserAddress>        RepoAddress,
+            IRepository<Wallet>             RepoWallet
+            )
         {
             this.Context        = Context;
             this.UserManger     = UserManger;
@@ -40,6 +61,9 @@ namespace TagerCom.Utility.DbInitializer
             this.repoCartItem = RepoCartItem;
             this.repoOrder = RepoOrder;
             this.repoOrderItem = RepoOrderItem;
+            this.repoReview = RepoReview;
+            this.repoAddress = RepoAddress;
+            this.repoWallet = RepoWallet;
         }
         #endregion
         
@@ -134,7 +158,7 @@ namespace TagerCom.Utility.DbInitializer
                         Email = "User@gmail.com",
                         EmailConfirmed = true,
 
-                    }, "Customer@123").GetAwaiter().GetResult();
+                    }, "User@123").GetAwaiter().GetResult();
                     var user1_result = UserManger.FindByEmailAsync("User@gmail.com").GetAwaiter().GetResult();
                     if (user1_result is not null)
                         UserManger.AddToRoleAsync(user1_result, "Customer").GetAwaiter().GetResult();
@@ -233,35 +257,101 @@ namespace TagerCom.Utility.DbInitializer
                     repoCart.AddAsync(new Cart { UserId = user1_result!.Id}).GetAwaiter().GetResult();
                     repoCart.CommitAsync().GetAwaiter().GetResult();
                     var cart1 = repoCart.GetOneAsync(e => e.UserId == user1_result.Id).GetAwaiter().GetResult();
-                    repoCartItem.AddAsync(new CartItem { CartId = cart1!.Id, ProductId = product1!.Id, PriceAtAddTime = product1.Price, Quantity = 5} );
-                    repoCartItem.AddAsync(new CartItem { CartId = cart1.Id, ProductId = product4!.Id, PriceAtAddTime = product4.Price, Quantity = 5} );
+                    repoCartItem.AddAsync(new CartItem { CartId = cart1!.Id, ProductId = product1!.Id, PriceAtAddTime = product1.Price, Quantity = 5} ).GetAwaiter().GetResult();
+                    repoCartItem.AddAsync(new CartItem { CartId = cart1.Id, ProductId = product4!.Id, PriceAtAddTime = product4.Price, Quantity = 5} ).GetAwaiter().GetResult();
 
                     repoCart.AddAsync(new Cart { UserId = user2_result!.Id }).GetAwaiter().GetResult();
                     repoCart.CommitAsync().GetAwaiter().GetResult();
                     var cart2 = repoCart.GetOneAsync(e => e.UserId == user2_result.Id).GetAwaiter().GetResult();
-                    repoCartItem.AddAsync(new CartItem { CartId = cart2!.Id, ProductId = product2!.Id, PriceAtAddTime = product2.Price, Quantity = 5 });
-                    repoCartItem.AddAsync(new CartItem { CartId = cart2.Id,  ProductId = product5!.Id, PriceAtAddTime = product5.Price, Quantity = 5 });
+                    repoCartItem.AddAsync(new CartItem { CartId = cart2!.Id, ProductId = product2!.Id, PriceAtAddTime = product2.Price, Quantity = 5 }).GetAwaiter().GetResult();
+                    repoCartItem.AddAsync(new CartItem { CartId = cart2.Id,  ProductId = product5!.Id, PriceAtAddTime = product5.Price, Quantity = 5 }).GetAwaiter().GetResult();
+                    repoCartItem.CommitAsync().GetAwaiter().GetResult();
+
+                    repoCart.AddAsync(new Cart { UserId = vendor1_result!.Id }).GetAwaiter().GetResult();
+                    repoCart.CommitAsync().GetAwaiter().GetResult();
+                    var cart3 = repoCart.GetOneAsync(e => e.UserId == vendor1_result.Id).GetAwaiter().GetResult();
+                    repoCartItem.AddAsync(new CartItem { CartId = cart3!.Id, ProductId = product2!.Id, PriceAtAddTime = product2.Price, Quantity = 5 }).GetAwaiter().GetResult();
+                    repoCartItem.AddAsync(new CartItem { CartId = cart3.Id,  ProductId = product5!.Id, PriceAtAddTime = product5.Price, Quantity = 5 }).GetAwaiter().GetResult();
                     repoCartItem.CommitAsync().GetAwaiter().GetResult();
 
                     // Seed Order
-                    repoOrder.AddAsync(new Order { ApplicationUserId = user1_result.Id, StoreId = store.Id, }).GetAwaiter().GetResult();
+                    repoOrder.AddAsync(new Order { CustomerId = user1_result.Id, StoreId = store.Id, }).GetAwaiter().GetResult();
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
-                    var order1 = repoOrder.GetOneAsync(e => e.ApplicationUserId == user1_result.Id).GetAwaiter().GetResult();
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price});
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price});
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product3!.Id, Quantity = 3, Price = product3.Price});
+                    var order1 = repoOrder.GetOneAsync(e => e.CustomerId == user1_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price}).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price}).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order1.Id, ProductId = product3!.Id, Quantity = 3, Price = product3.Price}).GetAwaiter().GetResult();
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
-                    repoOrder.AddAsync(new Order { ApplicationUserId = user2_result.Id, StoreId = store2.Id, }).GetAwaiter().GetResult();
+                    repoOrder.AddAsync(new Order { CustomerId = user2_result.Id, StoreId = store2.Id, }).GetAwaiter().GetResult();
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
-                    var order2 = repoOrder.GetOneAsync(e => e.ApplicationUserId == user2_result.Id).GetAwaiter().GetResult();
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price });
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price });
-                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price });
+                    var order2 = repoOrder.GetOneAsync(e => e.CustomerId == user2_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order2.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
                     repoOrderItem.CommitAsync().GetAwaiter().GetResult();
 
+                    repoOrder.AddAsync(new Order { CustomerId = user1_result.Id, StoreId = store.Id, OrderStatus = OrderStatus.AwaitingPayment }).GetAwaiter().GetResult();
+                    repoOrder.CommitAsync().GetAwaiter().GetResult();
+                    var order3 = repoOrder.GetOneAsync(e => e.CustomerId == user1_result.Id && e.StoreId == store.Id && e.OrderStatus == OrderStatus.AwaitingPayment).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.CommitAsync().GetAwaiter().GetResult();
+
+                    repoOrder.AddAsync(new Order { CustomerId = user1_result.Id, StoreId = store.Id, OrderStatus = OrderStatus.Cancelled }).GetAwaiter().GetResult();
+                    repoOrder.CommitAsync().GetAwaiter().GetResult();
+                    var order4 = repoOrder.GetOneAsync(e => e.CustomerId == user1_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.CommitAsync().GetAwaiter().GetResult();
+
+                    repoOrder.AddAsync(new Order { CustomerId = user1_result.Id, StoreId = store.Id, OrderStatus = OrderStatus.Completed }).GetAwaiter().GetResult();
+                    repoOrder.CommitAsync().GetAwaiter().GetResult();
+                    var order5 = repoOrder.GetOneAsync(e => e.CustomerId == user1_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.CommitAsync().GetAwaiter().GetResult();
+
+                    repoOrder.AddAsync(new Order { CustomerId = vendor1_result.Id, StoreId = store.Id, OrderStatus = OrderStatus.Refunded }).GetAwaiter().GetResult();
+                    repoOrder.CommitAsync().GetAwaiter().GetResult();
+                    var order6 = repoOrder.GetOneAsync(e => e.CustomerId == vendor1_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.CommitAsync().GetAwaiter().GetResult();
+
+                    repoOrder.AddAsync(new Order { CustomerId = vendor1_result.Id, StoreId = store.Id, OrderStatus = OrderStatus.OutForDelivery }).GetAwaiter().GetResult();
+                    repoOrder.CommitAsync().GetAwaiter().GetResult();
+                    var order7 = repoOrder.GetOneAsync(e => e.CustomerId == vendor1_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.CommitAsync().GetAwaiter().GetResult();
+
+                    repoOrder.AddAsync(new Order { CustomerId = vendor1_result.Id, StoreId = store2.Id, OrderStatus = OrderStatus.OutForDelivery }).GetAwaiter().GetResult();
+                    repoOrder.CommitAsync().GetAwaiter().GetResult();
+                    var order8 = repoOrder.GetOneAsync(e => e.CustomerId == vendor1_result.Id).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3!.Id, ProductId = product1.Id, Quantity = 3, Price = product1.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product2.Id, Quantity = 3, Price = product2.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.AddAsync(new OrderItem { OrderId = order3.Id, ProductId = product3.Id, Quantity = 3, Price = product3.Price }).GetAwaiter().GetResult();
+                    repoOrderItem.CommitAsync().GetAwaiter().GetResult();
+
+                    // Seed Reviw
+                    repoReview.AddAsync(new Review { ProductId = product1.Id, CustomerId = vendor1_result.Id, Rating = 7}).GetAwaiter().GetResult();
+                    repoReview.CommitAsync().GetAwaiter().GetResult();
+
+                    // Seed Address
+                    repoAddress.AddAsync(new UserAddress { ApplicationUserId = vendor1_result.Id, Country = "Giza", City = "6 October", Street = "street 16"}).GetAwaiter().GetResult();
+                    repoAddress.CommitAsync().GetAwaiter().GetResult();
+
+                    // Seed Wallet
+                    repoWallet.AddAsync(new Wallet { UserId = vendor1_result.Id, Balance = 400, Point = 42}).GetAwaiter().GetResult();
+                    repoWallet.CommitAsync().GetAwaiter().GetResult();
 
                     // ==================================================================================
                 }

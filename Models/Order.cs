@@ -6,34 +6,34 @@ namespace TagerCom.Models
     public enum OrderStatus
     {
         // 1. Initial States
-        Pending,              // قيد الانتظار (تم إنشاء الطلب)
-        AwaitingPayment,      // في انتظار الدفع
-        PaymentFailed,        // فشل الدفع
+        Pending,              // 0
+        AwaitingPayment,      // 1
+        PaymentFailed,        // 2
 
         // 2. After Payment
-        Confirmed,            // تم التأكيد (تم الدفع بنجاح)
-        Processing,           // قيد المعالجة (البائع يجهز الطلب)
+        Confirmed,            // 3
+        Processing,           // 4
 
         // 3. Shipping States
-        ReadyToShip,          // جاهز للشحن
-        Shipped,              // تم الشحن
-        OutForDelivery,       // في الطريق للتوصيل
+        ReadyToShip,          // 5
+        Shipped,              // 6
+        OutForDelivery,       // 7
 
         // 4. Final States
-        Delivered,            // تم التسليم
-        Completed,            // مكتمل (تم استلامه من العميل)
+        Delivered,            // 8
+        Completed,            // 9
 
         // 5. Problem States
-        Cancelled,            // ملغي (من العميل أو البائع)
-        Refunded,             // تم الاسترجاع
-        Returned,             // تم الإرجاع
-        Failed                // فشل الطلب
+        Cancelled,            // 10 
+        Refunded,             // 11
+        Returned,             // 12
+        Failed                // 13
     }
     public class Order
     {
-        public Guid          Id                  { get; set; } = Guid.NewGuid();
-        public string        ApplicationUserId   { get; set; } = string.Empty;
-        public Guid          StoreId             { get; set; }
+        public Guid           Id                 { get; set; } = Guid.NewGuid();
+        public string?        CustomerId         { get; set; } = string.Empty;
+        public Guid?          StoreId            { get; set; }
         [EnumDataType(typeof(StoreStatus))]
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderStatus   OrderStatus         { get; set; } = OrderStatus.Pending;
@@ -43,8 +43,8 @@ namespace TagerCom.Models
         // Navigation
         public ICollection<OrderItem>           OrderItems      { get; set; } = new List<OrderItem>();
         public ICollection<OrderStatusHistory>  StatusHistory   { get; set; } = new List<OrderStatusHistory>();
-        public ApplicationUser                  ApplicationUser { get; set; } = null!;
-        public Store                            Store           { get; set; } = null!;
+        public ApplicationUser                  Customer        { get; set; } = null!;
+        public Store?                           Store           { get; set; } = null!;
         public Payment?                         Payment         { get; set; }
     }
 

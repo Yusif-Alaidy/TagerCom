@@ -35,7 +35,7 @@ namespace TagerCom.Areas.Customer.Controllers
 
             // Pure Projection To DTO  --------------------------------------  
             var order = await _orderRepo.Query()
-                .Where(o => o.Id == id && o.ApplicationUserId == user.Id)
+                .Where(o => o.Id == id && o.CustomerId == user.Id)
                 .Select(o => new OrderResponseDTO
                 {
                     Id = o.Id,
@@ -46,7 +46,7 @@ namespace TagerCom.Areas.Customer.Controllers
 
                     TotalAmount = o.TotalAmount,
                     CreatedAt = o.CreatedAt,
-                    VendorName = o.Store.StoreName,
+                    VendorName = o.Store!.StoreName,
                     Items = o.OrderItems 
 
                         .Select(i => new OrderItemDTO
@@ -91,7 +91,7 @@ namespace TagerCom.Areas.Customer.Controllers
             // Query by Projection DTO  --------------------------------  
 
             var orders = await _orderRepo.Query()
-                .Where(o => o.ApplicationUserId == user.Id)
+                .Where(o => o.CustomerId == user.Id)
                 .OrderByDescending(o => o.CreatedAt)
                 .Select(o => new OrderResponseDTO
                 {
@@ -102,7 +102,7 @@ namespace TagerCom.Areas.Customer.Controllers
                           .FirstOrDefault() ?? o.OrderStatus.ToString(),
                     TotalAmount = o.TotalAmount,
                     CreatedAt = o.CreatedAt,
-                    VendorName = o.Store.StoreName ?? "Unknown Vendor",
+                    VendorName = o.Store!.StoreName ?? "Unknown Vendor",
                     Items = o.OrderItems.Select(i => new OrderItemDTO
                     {
                         ProductId = i.ProductId,
@@ -131,7 +131,7 @@ namespace TagerCom.Areas.Customer.Controllers
 
             // Client Side Projection -------------------------------------------
             var order = await _orderRepo.Query()
-                .Where(o => o.Id == id && o.ApplicationUserId == user.Id)
+                .Where(o => o.Id == id && o.CustomerId == user.Id)
                 .Include(o => o.OrderItems)
                 .ThenInclude(i => i.Product)
                 .Include(o => o.StatusHistory)
@@ -201,7 +201,7 @@ namespace TagerCom.Areas.Customer.Controllers
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
                 .Include(o => o.StatusHistory)
-                .FirstOrDefaultAsync(o => o.Id == id && o.ApplicationUserId == user.Id);
+                .FirstOrDefaultAsync(o => o.Id == id && o.CustomerId == user.Id);
 
             if (order == null)
                 return NotFound("Order not found");
@@ -244,7 +244,7 @@ namespace TagerCom.Areas.Customer.Controllers
                 //Then include because product exist in orderitem as navigation property
                 .ThenInclude(oi => oi.Product)
                 .Include(o => o.StatusHistory)
-                .FirstOrDefaultAsync(o => o.Id == orderId && o.ApplicationUserId == user.Id);
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == user.Id);
 
             if (order == null) return NotFound("Order not found");
 
