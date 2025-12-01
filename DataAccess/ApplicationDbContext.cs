@@ -75,7 +75,7 @@ namespace TagerCom.DataAccess
                 .HasIndex(e => e.CategoryId);
 
             builder.Entity<Order>()
-                .HasIndex(e => e.ApplicationUserId);
+                .HasIndex(e => e.CustomerId);
 
             builder.Entity<Order>()
                 .HasIndex(e => e.StoreId);
@@ -155,10 +155,10 @@ namespace TagerCom.DataAccess
             // ApplicationUser → Order (One-to-Many)
             // ============================================
             builder.Entity<Order>()
-                .HasOne(o => o.ApplicationUser)
+                .HasOne(o => o.Customer)
                 .WithMany(u => u.Orders)
-                .HasForeignKey(o => o.ApplicationUserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(o => o.CustomerId)
+                .OnDelete(DeleteBehavior.SetNull);
 
 
             // ============================================
@@ -178,7 +178,7 @@ namespace TagerCom.DataAccess
                 .HasOne(p => p.Store)
                 .WithMany(v => v.Products)
                 .HasForeignKey(p => p.StoreId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
 
             // ============================================
@@ -188,7 +188,7 @@ namespace TagerCom.DataAccess
                 .HasOne(o => o.Store)
                 .WithMany(v => v.Orders)
                 .HasForeignKey(o => o.StoreId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull);
 
 
             // ============================================

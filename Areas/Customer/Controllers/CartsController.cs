@@ -384,7 +384,7 @@ namespace TagerCom.Areas.Customer.Controllers
                     // Create order
                     var order = new Order
                     {
-                        ApplicationUserId = userId,
+                        CustomerId = userId,
                         StoreId = cartItems.First().Product.StoreId, // Product.VendorId is Guid
                         OrderStatus = OrderStatus.Pending,
                         TotalAmount = finalTotal,

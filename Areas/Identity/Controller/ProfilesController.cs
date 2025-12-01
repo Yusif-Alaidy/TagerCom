@@ -1,9 +1,11 @@
 ﻿using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using System.Linq.Expressions;
 
 namespace TagerCom.Area.Identity.Controller
 {
@@ -19,15 +21,51 @@ namespace TagerCom.Area.Identity.Controller
         private readonly IUserRepository userRepository;
         private readonly ApplicationDbContext context;
         private readonly IRepository<UserAddress> addressRepository;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IRepository<Store> _storeRepo;
+        private readonly IRepository<Product> _productRepo;
+        private readonly IRepository<Order> _orderRepo;
+        private readonly IRepository<Cart> _cartRepo;
+        private readonly IRepository<CartItem> _cartItemRepo;
+        private readonly IRepository<Review> _reviewRepo;
+        private readonly IRepository<UserAddress> _userAddressRepo;
+        private readonly ILogger<ProfilesController> _logger;
+        private readonly IRepository<Wallet> walletRepo;
+
         #endregion
 
         #region Constructore
-        public ProfilesController(UserManager<ApplicationUser> userManager, IUserRepository userRepository, ApplicationDbContext context, IRepository<UserAddress> addressRepository)
+        public ProfilesController(
+            UserManager<ApplicationUser>    userManager,
+            IUserRepository                 userRepository,
+            ApplicationDbContext            context,
+            IRepository<UserAddress>        addressRepository,
+            SignInManager<ApplicationUser>  signInManager,
+            IRepository<Store>              storeRepo,
+            IRepository<Product>            productRepo,
+            IRepository<Order>              orderRepo,
+            IRepository<Cart>               cartRepo,
+            IRepository<CartItem>           cartItemRepo,
+            IRepository<Review>             reviewRepo,
+            IRepository<UserAddress>        userAddressRepo,
+            ILogger<ProfilesController>     logger,
+            IRepository<Wallet>             walletRepo
+            )
         {
-            _userManager = userManager;
-            this.userRepository = userRepository;
-            this.context = context;
-            this.addressRepository = addressRepository;
+            _userManager            = userManager;
+            this.userRepository     = userRepository;
+            this.context            = context;
+            this.addressRepository  = addressRepository;
+            _signInManager          = signInManager;
+            _storeRepo              = storeRepo;
+            _productRepo            = productRepo;
+            _orderRepo              = orderRepo;
+            _cartRepo               = cartRepo;
+            _cartItemRepo           = cartItemRepo;
+            _reviewRepo             = reviewRepo;
+            _userAddressRepo        = userAddressRepo;
+            _logger                 = logger;
+            this.walletRepo         = walletRepo;
         }
         #endregion
 
@@ -191,8 +229,177 @@ namespace TagerCom.Area.Identity.Controller
 
         #endregion
 
+        #region Delete My Account
+        [HttpDelete]
+        public async Task<IActionResult> DeleteMyAccount()
+        {
+            try
+            {
+                // 1. Get current user ================================================
+                var user = await _userManager.GetUserAsync(User);
+
+                if (user == null)
+                    return Unauthorized(new { message = "User not found" });
+                // ====================================================================
+
+                // 2. Check if user has a store (is a vendor) =========================
+                var store = await _storeRepo.GetOneAsync(
+                    s => s.ApplicationUserId == user.Id,
+                    includes: [e=>e.Orders,e => e.Products]);
+                if (store != null)
+                {
+                    // Check if store has active orders
+                    var hasActiveOrders = store.Orders.Any(o =>
+                    o.OrderStatus != OrderStatus.Completed &&
+                    o.OrderStatus != OrderStatus.Cancelled &&
+                    o.OrderStatus != OrderStatus.Refunded);
+
+                    if (hasActiveOrders)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Cannot delete account. You have active orders. Please complete or cancel them first."
+                        });
+                    }
+
+                    // Get all cart items for store products
+                    var productIds = store.Products.Select(p => p.Id).ToList();
+                    var cartItems = await _cartItemRepo.GetAsync(
+                    ci => productIds.Contains(ci.ProductId));
+
+                    // Remove products from carts
+                    await _cartItemRepo.DeleteRangeAsync(cartItems);
+                    await _cartItemRepo.CommitAsync();
+
+                    // Soft delete products
+                    foreach (var product in store.Products)
+                    {
+                         product.IsActive = false;
+                         product.IsDeleted = true;
+                        _productRepo.Update(product);
+                    }
+
+                    // Soft delete store
+                    store.IsActive = false;
+                    store.IsDeleted = true;
+                    _storeRepo.Update(store);
+
+                    await _storeRepo.CommitAsync();
+                    // Check if he have money in wallet 
+
+                    var wallet = await walletRepo.GetOneAsync(e => e.UserId == user.Id);
+                    if (wallet!.Balance > 0)
+                    {
+                        return BadRequest(new {message = "Cannot delete account. You have money in wallet" });
+                    }
+                    
+                }
+                // ====================================================================
+
+                // 3. Handle user's orders (as a customer) ============================
+                var customerOrders = await _orderRepo.GetAsync(
+                o => o.CustomerId == user.Id);
+
+                var hasActiveCustomerOrders = customerOrders.Any(o =>
+                o.OrderStatus != OrderStatus.Completed &&
+                o.OrderStatus != OrderStatus.Cancelled &&
+                o.OrderStatus != OrderStatus.Refunded);
+
+                if (hasActiveCustomerOrders)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Cannot delete account. You have active orders as a customer."
+                    });
+                }
+
+                foreach (var order in customerOrders)
+                {
+                    order.CustomerId = null;  // لو عملت nullable
+                    _orderRepo.Update(order);
+                }
+                await _orderRepo.CommitAsync();
+                // ====================================================================
+
+                // 4. Handle user's cart ==============================================
+                var cart = await _cartRepo.GetOneAsync(
+                    c => c.UserId == user.Id,
+                    includes: [ c => c.Items ]);
+
+                if (cart != null)
+                {
+                    await _cartItemRepo.DeleteRangeAsync(cart.Items.ToList());
+                    _cartRepo.Delete(cart);
+                    await _cartRepo.CommitAsync();
+                }
+                // ====================================================================
+
+                // 5. Handle reviews (delete them) ====================================
+                var reviews = await _reviewRepo.GetAsync(
+                    r => r.CustomerId == user.Id);
+
+                if (reviews.Any())
+                {
+                    await _reviewRepo.DeleteRangeAsync(reviews);
+                    await _reviewRepo.CommitAsync();
+                }
+
+                // Option: Keep reviews but anonymize
+                // foreach (var review in reviews)
+                // {
+                //     review.CustomerId = "deleted-user";
+                //     _reviewRepo.Update(review);
+                // }
+                // await _reviewRepo.CommitAsync();
+                // ====================================================================
+
+                // 6. Handle addresses ================================================
+                var addresses = await _userAddressRepo.GetAsync(
+                    a => a.ApplicationUserId == user.Id);
+
+                if (addresses.Any())
+                {
+                    await _userAddressRepo.DeleteRangeAsync(addresses);
+                    await _userAddressRepo.CommitAsync();
+                }
+                // ====================================================================
+
+                // 7. Delete user account =============================================
+                var result = await _userManager.DeleteAsync(user);
+
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Failed to delete account",
+                        errors = result.Errors.Select(e => e.Description)
+                    });
+                }
+                // ====================================================================
+
+                // 8. Sign out user ===================================================
+                await _signInManager.SignOutAsync();
+
+                return Ok(new
+                {
+                    message = "Account deleted successfully"
+                });
+                }
+                // ====================================================================
+
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting user account");
+                    return StatusCode(500, new
+                    {
+                        message = "An error occurred while deleting your account"
+                    });
+                }
+        }
+        #endregion
+
         #region Helper
-        
+
         // Save image in wwwroot/img folder -------------------------------------------------------
         private async Task<string> SaveImageAsync(IFormFile file)
         {
