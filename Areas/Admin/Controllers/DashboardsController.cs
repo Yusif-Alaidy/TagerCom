@@ -75,7 +75,7 @@ namespace TagerCom.Areas.Admin.Controllers
             // ----------------------------------------------------------------------------------------------------------------------------
 
 
-            // 5. Map results to DTOs to prevent circular reference issues ----------------------------------------------------------------
+            // 4. Map results to DTOs to prevent circular reference issues ----------------------------------------------------------------
             var PendingVendorsDTO = PendingVendors.Select(e => new PendingVendorResponse
             {
                 ApplicationUserId   = e.ApplicationUserId,
@@ -106,7 +106,7 @@ namespace TagerCom.Areas.Admin.Controllers
         {
 
             // Get spcific pending vendor --------------------------
-            var pendingVendor = await Vendor.GetOneAsync(e=>e.Id == request.VendorId,includes:[e=>e.ApplicationUser]);
+            var pendingVendor = await Vendor.GetOneAsync(e=>e.Id == request.VendorId,includes:[e=>e.ApplicationUser!]);
             if (pendingVendor == null)
                 return NotFound(new {msg = "this store is not found"});
             //------------------------------------------------------
@@ -116,7 +116,7 @@ namespace TagerCom.Areas.Admin.Controllers
             if (request.ApprovedOrRejected.ToString() == "Approved")
             {
                 pendingVendor.Status = StoreStatus.Approved;
-                await UserManager.AddToRoleAsync(pendingVendor.ApplicationUser, "Vendor");
+                await UserManager.AddToRoleAsync(pendingVendor.ApplicationUser!, "Vendor");
                 return Ok(new
                 {
                     msg = "Successfuly Welcome in our familey now you are a vendor"
