@@ -36,8 +36,8 @@ namespace TagerCom.Areas.Store.Controllers
 
 
             // Check if this user has complete profile --------------------
-            var address = userAddress.GetAsync(e => e.ApplicationUserId == user.Id);
-            if (user.PhoneNumber == null && user.FirstName == null && user.FirstName == null && user.PhoneNumber == "" && user.FirstName == "" && user.FirstName == "" && address == null)
+            var address = userAddress.GetAsync(e => e.ApplicationUserId == user!.Id);
+            if (user!.PhoneNumber == null && user.FirstName == null && user.FirstName == null && user.PhoneNumber == "" && user.FirstName == "" && user.FirstName == "" && address == null)
             {
                 return BadRequest(new {msg = "Your Profile is not complete"});
             }
