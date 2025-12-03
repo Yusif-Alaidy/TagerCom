@@ -91,7 +91,7 @@ namespace TagerCom.Areas.Customer.Controllers
             );
 
             if (productExists == null)
-                return NotFound("Product not found.");
+                return NotFound("Product not found");
 
             var ratings = await _reviewRepository.Query()
                 .Where(r => r.ProductId == productId)
@@ -115,7 +115,92 @@ namespace TagerCom.Areas.Customer.Controllers
         }
 
 
+        [HttpPut("products/{productId:guid}/review")]
+        public async Task<IActionResult> UpdateMyReviewForProduct(Guid productId, [FromBody] UpdateReviewDTO dto)
+        {
+            // 
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
 
+            // 
+            if (dto.Rating < 1 || dto.Rating > 5)
+                return BadRequest("Rating must be between 1 and 5");
+
+            if (dto.Comment != null && dto.Comment.Length > 1000)
+                return BadRequest("Comment is too long (max 1000 characters)");
+
+            //  
+            var product = await _productRepo.GetOneAsync(
+                p => p.Id == productId && !p.IsDeleted && p.IsActive,
+                tracked: false
+            );
+            if (product == null)
+                return NotFound("Product not found");
+
+            // 
+            var hasBought = await _orderRepo.GetOneAsync(
+                o => o.CustomerId == user.Id
+                     && (o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed)
+                     && o.OrderItems.Any(oi => oi.ProductId == productId),
+                tracked: false
+            );
+            if (hasBought == null)
+                return BadRequest("You can only update reviews for products you purchased");
+
+            var review = await _reviewRepository.GetOneAsync(
+                r => r.ProductId == productId && r.CustomerId == user.Id,
+                tracked: true
+            );
+            if (review == null)
+                return NotFound("You don't have a review for this product");
+
+            review.Rating = dto.Rating;
+            review.Comment = dto.Comment?.Trim();
+
+            await _reviewRepository.CommitAsync();
+            return Ok(new { message = "Review updated" });
+        }
+
+
+        [HttpDelete("products/{productId:guid}/review")]
+        public async Task<IActionResult> DeleteMyReviewForProduct(Guid productId)
+        {
+           
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            var product = await _productRepo.GetOneAsync(p => p.Id == productId && 
+            !p.IsDeleted && p.IsActive, tracked: false);
+
+            if (product == null)
+                return NotFound("Product not found.");
+
+            var hasBought = await _orderRepo.GetOneAsync(
+                o => o.CustomerId == user.Id
+                && (o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed)
+                && o.OrderItems.Any(oi => oi.ProductId == productId),
+                tracked: false
+                 );
+
+
+            if (hasBought == null)
+                return BadRequest("You can only delete reviews for products you purchased");
+
+            // 3) هات الريفيو بتاعه على المنتج
+            var review = await _reviewRepository.GetOneAsync(
+                r => r.ProductId == productId && r.CustomerId == user.Id,
+                tracked: true
+                 );
+
+            if (review == null)
+                return NotFound("You don't have a review for this product");
+
+            
+            _reviewRepository.Delete(review);
+            await _reviewRepository.CommitAsync();
+
+            return Ok(new { message = "Review deleted" });
+        }
 
     }
 }
