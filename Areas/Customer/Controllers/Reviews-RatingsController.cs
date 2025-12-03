@@ -81,7 +81,39 @@ namespace TagerCom.Areas.Customer.Controllers
 
 
 
-       
+        [HttpGet("products/{productId:guid}/rating-summary")]
+        public async Task<IActionResult> GetProductRatingSummary(Guid productId)
+        {
+            // 
+            var productExists = await _productRepo.GetOneAsync(
+                p => p.Id == productId && !p.IsDeleted && p.IsActive,
+                tracked: false
+            );
+
+            if (productExists == null)
+                return NotFound("Product not found.");
+
+            var ratings = await _reviewRepository.Query()
+                .Where(r => r.ProductId == productId)
+                .GroupBy(r => r.ProductId)
+                .Select(G => new ProductRatingDTO
+                {
+                    ProductId = G.Key,
+                    AverageRating = G.Average(a => (double)a.Rating),
+                    ReviewsCount = G.Count()
+                })
+                .FirstOrDefaultAsync();
+
+            ratings ??= new ProductRatingDTO
+            {
+                ProductId = productId,
+                AverageRating = 0,
+                ReviewsCount = 0
+            };
+
+            return Ok(ratings);
+        }
+
 
 
 
