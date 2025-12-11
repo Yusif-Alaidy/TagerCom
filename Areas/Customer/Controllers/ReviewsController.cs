@@ -112,7 +112,7 @@ namespace TagerCom.Areas.Customer.Controllers
                     r.Id,
                     r.CustomerId,
                     r.Rating,
-                    Comment = r.Comment.Trim(),
+                    Comment = r.Comment!.Trim(),
                     r.CreatedAt
                 })
                 .ToListAsync();

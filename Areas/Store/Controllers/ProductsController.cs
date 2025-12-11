@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using TagerCom.Areas.Store.DTOs.Request;
@@ -333,6 +334,27 @@ namespace TagerCom.Areas.Store.Controllers
         }
         #endregion
 
+        #region Toggle Product Availability
+        [HttpPatch("Availability/{id}")]
+        public async Task<IActionResult> ProductAvailability(Guid id)
+        {
+            var user    = await userManager.GetUserAsync(User);
+            var store   = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
+            if (store is null)
+            {
+                return BadRequest(new { message = "You are not have a store" });
+            }
+            var product = await ProductRepo.GetOneAsync(e => e.Id == id&&e.IsDeleted == false);
+            if (product == null)
+            {
+                return BadRequest(new{message="This product is not exist"});
+            }
+            product.IsActive = product.IsActive ? false : true;
+            await ProductRepo.CommitAsync();
+            return Ok();
+        } 
+        #endregion
+
         #region Helper
 
         // Save image in wwwroot/img folder -------------------------------------------------------
@@ -366,7 +388,5 @@ namespace TagerCom.Areas.Store.Controllers
         }
 
         #endregion
-
-        //more info
     }
 }
