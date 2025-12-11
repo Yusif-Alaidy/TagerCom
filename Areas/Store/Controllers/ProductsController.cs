@@ -367,5 +367,6 @@ namespace TagerCom.Areas.Store.Controllers
 
         #endregion
 
+        //more info
     }
 }
