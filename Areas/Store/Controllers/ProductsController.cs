@@ -92,7 +92,7 @@ namespace TagerCom.Areas.Store.Controllers
         {
             // Get User ===============================================================================
             var vendor = await userManager.GetUserAsync(User);
-            var store  = await StoreRepo.GetOneAsync(e => e.ApplicationUserId == vendor!.Id);
+            var store  = await StoreRepo.GetOneAsync(e => e.ApplicationUserId == vendor!.Id && e.IsDeleted == false);
 
             if (store == null)
             {
@@ -106,7 +106,7 @@ namespace TagerCom.Areas.Store.Controllers
             // ========================================================================================
 
             // Get All Product ========================================================================
-            var products = await ProductRepo.GetAsync(e => e.StoreId == store.Id);
+            var products = await ProductRepo.GetAsync(e => e.StoreId == store.Id && e.IsDeleted == false);
             // ========================================================================================
 
             // Filters ================================================================================
@@ -199,7 +199,7 @@ namespace TagerCom.Areas.Store.Controllers
         {
             // Get Product ============================================================================================================================
             var user  = await userManager.GetUserAsync(User);
-            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id);
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
             if (store == null)
             {
                 return NotFound(new { message = "Store not found" });
@@ -264,8 +264,8 @@ namespace TagerCom.Areas.Store.Controllers
         public async Task<IActionResult> UpdateProduct(Guid id, [FromForm] ProductsUpdateRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id);
-            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store!.Id);
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
+            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store!.Id && e.IsDeleted == false);
             if (product == null)
                 return NotFound(new { Message = "Product not found" });
 
@@ -310,6 +310,28 @@ namespace TagerCom.Areas.Store.Controllers
 
         #endregion
 
+        #region Delete Product
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProduct(Guid id)
+        {
+            var user    = await userManager.GetUserAsync(User);
+            var store   = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
+            if (store is null)
+            {
+                return BadRequest(new {message = "You are not have a store"});
+            }
+
+            var product = await ProductRepo.GetOneAsync(e => e.Id == id);
+            if (product!.IsDeleted == true)
+            {
+                return BadRequest(new {message = "This product is already deleted"});
+            }
+            product.IsDeleted = true;
+            product.StoreId = null;
+            await ProductRepo.CommitAsync();
+            return Ok(new {message = "The product is deleted succesfully"});
+        }
+        #endregion
 
         #region Helper
 
