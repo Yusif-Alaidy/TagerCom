@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using TagerCom.Areas.Store.DTOs.Request;
 using TagerCom.Areas.Store.DTOs.Response;
@@ -257,6 +258,58 @@ namespace TagerCom.Areas.Store.Controllers
             return Ok(res);
         }
         #endregion
+
+        #region Update Product
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> UpdateProduct(Guid id, [FromForm] ProductsUpdateRequest request)
+        {
+            var user = await userManager.GetUserAsync(User);
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id);
+            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store!.Id);
+            if (product == null)
+                return NotFound(new { Message = "Product not found" });
+
+            // Update basic fields if provided
+            if (request.Name != null)
+                product.Name = request.Name;
+
+            if (request.Description != null)
+                product.Description = request.Description;
+
+            if (request.Price.HasValue)
+                product.Price = request.Price.Value;
+
+            if (request.Stock.HasValue)
+                product.Stock = request.Stock.Value;
+
+            if (request.CategoryId.HasValue)
+                product.CategoryId = request.CategoryId.Value;
+
+            if (request.BrandId.HasValue)
+                product.BrandId = request.BrandId.Value;
+
+            if (request.ImageUrl is not null)
+            {
+
+                var newFile = await SaveImageAsync(request.ImageUrl);
+                if (!string.IsNullOrEmpty(product.ImageUrl) )
+                {
+                    var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "img", product.ImageUrl);
+                    if (System.IO.File.Exists(oldPath))
+                        System.IO.File.Delete(oldPath);
+                }
+                product.ImageUrl = newFile;
+            }
+            await ProductRepo.CommitAsync();
+
+            return Ok(new
+            {
+                Message = "Product updated successfully",
+            });
+        }
+
+        #endregion
+
 
         #region Helper
 
