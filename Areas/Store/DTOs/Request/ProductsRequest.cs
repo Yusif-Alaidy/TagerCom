@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TagerCom.Areas.Store.DTOs
+namespace TagerCom.Areas.Store.DTOs.Request
 {
     public class ProductsRequest
     {
