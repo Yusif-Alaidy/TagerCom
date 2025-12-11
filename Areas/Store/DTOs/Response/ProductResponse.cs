@@ -1,0 +1,30 @@
+﻿namespace TagerCom.Areas.Store.DTOs.Response
+{
+    public class ProductResponse
+    {
+        public Guid         Id                  { get; set; }
+        public string       Name                { get; set; } = null!;
+        public Guid?        StoreId             { get; set; }
+        public Guid?        CategoryId          { get; set; }
+        public string?      Category            { get; set; }
+        public string       Description         { get; set; } = null!;
+        public decimal      Price               { get; set; }
+        public int          Stock               { get; set; }
+        public string?      ImageUrl            { get; set; }
+        public bool         IsActive            { get; set; } = true;
+        public DateTime     CreatedAt           { get; set; }
+
+        public int?         TotalSold           { get; set; }
+        public decimal?     TotalRevenue        { get; set; }
+
+        public int?         TotalRatings        { get; set; }
+        public double?      AverageRating       { get; set; }
+
+        public int?         TotalSales7Days     { get; set; }
+        public decimal?     TotalRevenue7Days   { get; set; }
+        
+
+
+
+    }
+}

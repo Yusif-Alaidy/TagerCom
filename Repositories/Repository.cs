@@ -38,7 +38,7 @@ namespace TagerCom.Repositories
 
        
 
-        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? filter = null, Expression<Func<T, object>>[]? include = null, bool tracked = true)
+        public async Task<List<T>> GetAsync(Expression<Func<T, bool>>? filter = null, Expression<Func<T, object>>[]? includes = null, bool tracked = true)
         {
             var data = _db.AsQueryable();
 
@@ -46,9 +46,9 @@ namespace TagerCom.Repositories
             {
                 data = data.Where(filter);
             }
-            if (include is not null)
+            if (includes is not null)
             {
-                foreach (var item in include)
+                foreach (var item in includes)
                 {
                     data = data.Include(item);
                 }
