@@ -21,7 +21,7 @@ namespace TagerCom.Areas.Customer.Controllers
         #endregion
 
         #region Ctor
-        public Reviews_RatingsController(
+        public ReviewsController(
             IRepository<Review> reviewRepository,
             UserManager<ApplicationUser> userManager,
             IRepository<Models.Store> vendorRepository,

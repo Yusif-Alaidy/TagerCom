@@ -48,13 +48,13 @@ namespace TagerCom.DataAccess
 
                 if (idProperty != null)
                 {
-                    
+
                     if (idProperty.ClrType == typeof(Guid))
                     {
                         idProperty.ValueGenerated = ValueGenerated.OnAdd;
                     }
 
-                    
+
                     if (idProperty.ClrType == typeof(int))
                     {
                         idProperty.ValueGenerated = ValueGenerated.OnAdd;
@@ -67,7 +67,7 @@ namespace TagerCom.DataAccess
                 .WithMany()
                 .HasForeignKey(t => t.SupportId);
 
-            
+
             builder.Entity<Product>()
                 .HasIndex(e => e.StoreId);
 
@@ -250,7 +250,7 @@ namespace TagerCom.DataAccess
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ============================================
-      
+
             // Validation =================================
             // Ensure unique cart per user
             builder.Entity<Cart>()
@@ -287,6 +287,69 @@ namespace TagerCom.DataAccess
                 .Property(v => v.RevenueShare)
                 .HasPrecision(5, 4);
             // ============================================
+            // Product ↔ OrderItem
+            builder.Entity<OrderItem>()
+                .HasOne(oi => oi.Product)
+                .WithMany(p => p.OrderItems)
+                .HasForeignKey(oi => oi.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Product ↔ Store
+            builder.Entity<Product>()
+                .HasOne(p => p.Store)
+                .WithMany(s => s.Products)
+                .HasForeignKey(p => p.StoreId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Product ↔ Category
+            builder.Entity<Product>()
+                .HasOne(p => p.Category)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Category Self Relationship
+            builder.Entity<Category>()
+                .HasOne(c => c.Parent)
+                .WithMany(c => c.Chiled)
+                .HasForeignKey(c => c.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Product ↔ Brand
+            builder.Entity<Product>()
+                .HasOne(p => p.Brand)
+                .WithMany(b => b.Products)
+                .HasForeignKey(p => p.BrandId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+
+            // Order ↔ Store
+            builder.Entity<Order>()
+                .HasOne(o => o.Store)
+                .WithMany(s => s.Orders)
+                .HasForeignKey(o => o.StoreId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ApplicationUser ↔ Store
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.Store)
+                .WithOne(s => s.ApplicationUser)
+                .HasForeignKey<Store>(s => s.ApplicationUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Decimal Fix
+            builder.Entity<Payment>()
+                .Property(p => p.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            builder.Entity<Transaction>()
+                .Property(t => t.Amount)
+                .HasColumnType("decimal(18,2)");
+
+            builder.Entity<Wallet>()
+                .Property(w => w.Balance)
+                .HasColumnType("decimal(18,2)");
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
