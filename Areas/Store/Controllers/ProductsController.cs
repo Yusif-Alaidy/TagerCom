@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using TagerCom.Areas.Store.DTOs.Request;
@@ -92,7 +93,7 @@ namespace TagerCom.Areas.Store.Controllers
         {
             // Get User ===============================================================================
             var vendor = await userManager.GetUserAsync(User);
-            var store  = await StoreRepo.GetOneAsync(e => e.ApplicationUserId == vendor!.Id);
+            var store  = await StoreRepo.GetOneAsync(e => e.ApplicationUserId == vendor!.Id && e.IsDeleted == false);
 
             if (store == null)
             {
@@ -106,7 +107,7 @@ namespace TagerCom.Areas.Store.Controllers
             // ========================================================================================
 
             // Get All Product ========================================================================
-            var products = await ProductRepo.GetAsync(e => e.StoreId == store.Id);
+            var products = await ProductRepo.GetAsync(e => e.StoreId == store.Id && e.IsDeleted == false);
             // ========================================================================================
 
             // Filters ================================================================================
@@ -199,7 +200,7 @@ namespace TagerCom.Areas.Store.Controllers
         {
             // Get Product ============================================================================================================================
             var user  = await userManager.GetUserAsync(User);
-            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id);
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
             if (store == null)
             {
                 return NotFound(new { message = "Store not found" });
@@ -264,8 +265,8 @@ namespace TagerCom.Areas.Store.Controllers
         public async Task<IActionResult> UpdateProduct(Guid id, [FromForm] ProductsUpdateRequest request)
         {
             var user = await userManager.GetUserAsync(User);
-            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id);
-            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store!.Id);
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
+            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store!.Id && e.IsDeleted == false);
             if (product == null)
                 return NotFound(new { Message = "Product not found" });
 
@@ -310,6 +311,80 @@ namespace TagerCom.Areas.Store.Controllers
 
         #endregion
 
+        #region Delete Product
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProduct(Guid id)
+        {
+            var user    = await userManager.GetUserAsync(User);
+            var store   = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
+            if (store is null)
+            {
+                return BadRequest(new {message = "You are not have a store"});
+            }
+
+            var product = await ProductRepo.GetOneAsync(e => e.Id == id);
+            if (product!.IsDeleted == true)
+            {
+                return BadRequest(new {message = "This product is already deleted"});
+            }
+            product.IsDeleted = true;
+            product.StoreId = null;
+            await ProductRepo.CommitAsync();
+            return Ok(new {message = "The product is deleted succesfully"});
+        }
+        #endregion
+
+        #region Toggle Product Availability
+        [HttpPatch("Availability/{id}")]
+        public async Task<IActionResult> ProductAvailability(Guid id)
+        {
+            var user    = await userManager.GetUserAsync(User);
+            var store   = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false);
+            if (store is null)
+            {
+                return BadRequest(new { message = "You are not have a store" });
+            }
+            var product = await ProductRepo.GetOneAsync(e => e.Id == id&&e.IsDeleted == false);
+            if (product == null)
+            {
+                return BadRequest(new{message="This product is not exist"});
+            }
+            product.IsActive = product.IsActive ? false : true;
+            await ProductRepo.CommitAsync();
+            return Ok(new {message = "You change availability product successfuly."});
+        }
+        #endregion
+
+        #region Apply Discount
+        [HttpPatch("discount/{id}")]
+        public async Task<IActionResult> ApplyDiscount(Guid id, ApplyDiscountRequest request)
+        {
+            // Get user =================================================
+            var user = await userManager.GetUserAsync(User);
+            // ==========================================================
+
+            // Get store ================================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false && e.IsActive == true);
+            if (store == null)
+                return BadRequest(new {message = "This store is not available !"});
+            // ==========================================================
+
+            // Get product ==============================================
+            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.IsDeleted == false && e.IsActive == true);
+            if (product == null)
+                return BadRequest(new {message = "This product is not exist !"});
+            // ==========================================================
+
+            // Apply Discount ===========================================
+            product.DiscountValueFixed = request.DiscountValueFixed;
+            product.DiscountStartDate  = request.DiscountStartDate;
+            product.DiscountEndDate    = request.DiscountEndDate;
+            await ProductRepo.CommitAsync();
+            // ==========================================================
+            
+            return Ok(new {message = "You applyed Discount Successfuly."});
+        } 
+        #endregion
 
         #region Helper
 
@@ -344,6 +419,5 @@ namespace TagerCom.Areas.Store.Controllers
         }
 
         #endregion
-
     }
 }
