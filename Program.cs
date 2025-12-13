@@ -77,8 +77,8 @@ namespace TagerCom
             }
             // --------------------------------------------------------
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
+            //if (app.Environment.IsDevelopment())
+           // {
                 // This generates openapi.json
                 app.MapOpenApi();
 
@@ -89,7 +89,7 @@ namespace TagerCom
                     options.SwaggerEndpoint("/swagger/v1/swagger.json", "TagerCom API v1");
                     options.RoutePrefix = "swagger"; // open at /swagger
                 });
-            }
+            //}
 
             app.UseHttpsRedirection();
 

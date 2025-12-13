@@ -8,6 +8,8 @@
 
         // Navigation
         public Category?                Parent { get; set; }
-        public ICollection<Category>    Chiled { get; set; } = new List<Category>(); 
+        public ICollection<Category>    Chiled { get; set; } = new List<Category>();
+        // ADD THIS 👇
+        public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }
