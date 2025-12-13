@@ -351,7 +351,38 @@ namespace TagerCom.Areas.Store.Controllers
             }
             product.IsActive = product.IsActive ? false : true;
             await ProductRepo.CommitAsync();
-            return Ok();
+            return Ok(new {message = "You change availability product successfuly."});
+        }
+        #endregion
+
+        #region Apply Discount
+        [HttpPatch("discount/{id}")]
+        public async Task<IActionResult> ApplyDiscount(Guid id, ApplyDiscountRequest request)
+        {
+            // Get user =================================================
+            var user = await userManager.GetUserAsync(User);
+            // ==========================================================
+
+            // Get store ================================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false && e.IsActive == true);
+            if (store == null)
+                return BadRequest(new {message = "This store is not available !"});
+            // ==========================================================
+
+            // Get product ==============================================
+            var product = await ProductRepo.GetOneAsync(e=>e.Id == id && e.IsDeleted == false && e.IsActive == true);
+            if (product == null)
+                return BadRequest(new {message = "This product is not exist !"});
+            // ==========================================================
+
+            // Apply Discount ===========================================
+            product.DiscountValueFixed = request.DiscountValueFixed;
+            product.DiscountStartDate  = request.DiscountStartDate;
+            product.DiscountEndDate    = request.DiscountEndDate;
+            await ProductRepo.CommitAsync();
+            // ==========================================================
+            
+            return Ok(new {message = "You applyed Discount Successfuly."});
         } 
         #endregion
 
