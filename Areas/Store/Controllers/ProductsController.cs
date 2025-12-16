@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Humanizer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -383,8 +384,58 @@ namespace TagerCom.Areas.Store.Controllers
             // ==========================================================
             
             return Ok(new {message = "You applyed Discount Successfuly."});
-        } 
+        }
         #endregion
+
+        #region Get Best Sellers
+        [HttpGet("best-seller")]
+        public async Task<IActionResult> GetBestSeller(int size = 10)
+        {
+            // Get user =========================================
+            var user = await userManager.GetUserAsync(User);
+            // ==================================================
+
+            // Get Store ========================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false && e.IsActive == true);
+            if (store == null)
+            {
+                return BadRequest(new {message = "This store is not exist!"});
+            }
+            // ==================================================
+
+            // Get product ======================================
+            var product = (await ProductRepo.GetAsync(e=>e.StoreId == store.Id && e.IsDeleted == false && e.IsActive == true, includes:[equals=>equals.OrderItems])).ToList()
+                .Select(p => new
+                {
+                    Product = p,
+                    // ✅ Total Quantity من كل الـ OrderItems
+                    TotalSales = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
+                    // ✅ Total Revenue = Quantity × Price لكل OrderItem
+                    TotalRevenue = p.OrderItems.Sum(oi => (decimal?)(oi.Quantity * oi.Price)) ?? 0
+                })
+                .Where(x => x.TotalSales > 0) // فقط المنتجات اللي اتباعت
+                .OrderByDescending(x => x.TotalSales) // ترتيب بعدد القطع المباعة
+                .Take(size)
+                .Select(e => new ProductResponse
+                {
+                Id          = e.Product.Id,
+                Name        = e.Product.Name,
+                StoreId     = e.Product.StoreId,
+                CategoryId  = e.Product.CategoryId,
+                Description = e.Product.Description,
+                Price       = e.Product.Price,
+                Stock       = e.Product.Stock,
+                ImageUrl    = e.Product.ImageUrl,
+                IsActive    = e.Product.IsActive,
+                CreatedAt   = e.Product.CreatedAt
+                });
+            if (product == null)
+                return NoContent();
+            // ==================================================
+
+            return Ok(product);
+        }
+        #endregion 
 
         #region Helper
 
