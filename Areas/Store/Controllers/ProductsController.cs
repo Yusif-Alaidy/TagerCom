@@ -477,7 +477,8 @@ namespace TagerCom.Areas.Store.Controllers
             return Ok(products);
         }
         #endregion
-        #region Get out of stock
+
+        #region Get low stock
         [HttpGet("low-stock")]
         public async Task<IActionResult> GetLowStock(int minimum = 10, int page = 1, int pageSize = 10)
         {
@@ -489,7 +490,7 @@ namespace TagerCom.Areas.Store.Controllers
             var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive);
             if (store == null)
             {
-                return NotFound(new {message = "this store is not exist"});
+                return NotFound(new {message = "this store is not exist!"});
             }
 
             // ========================================================
@@ -514,6 +515,40 @@ namespace TagerCom.Areas.Store.Controllers
             // ========================================================
 
             return Ok(products);
+        }
+        #endregion
+
+        #region Get Product Review
+        [HttpGet("review/{id}")]
+        public async Task<IActionResult> GetReview(Guid id, int page = 1 , int pageSize = 10)
+        {
+            // Get user =========================================
+            var user = await userManager.GetUserAsync(User);
+            // ==================================================
+
+            // Get store ========================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsActive && !e.IsDeleted);
+            if (store == null)
+            {
+                return NotFound(new {message = "this store is not exist!"});
+            }
+            // ==================================================
+
+            // Get All Reveiw ===================================
+            var reviews = (await ReviewRepo.GetAsync(e=>e.ProductId == id))
+                .Skip((page - 1)*pageSize)
+                .Take(pageSize)
+                .Select(e=>new ReviewResponse
+                {
+                    Id          = e.Id,
+                    CustomerId  = e.CustomerId,
+                    Rating      = e.Rating,
+                    Comment     = e.Comment,
+                    CreatedAt   = e.CreatedAt
+                    
+                }); 
+            // ==================================================
+            return Ok(reviews);
         }
         #endregion
 
