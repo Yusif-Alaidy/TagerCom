@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Humanizer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using System.Linq;
 using TagerCom.Areas.Store.DTOs.Request;
 using TagerCom.Areas.Store.DTOs.Response;
@@ -383,7 +385,171 @@ namespace TagerCom.Areas.Store.Controllers
             // ==========================================================
             
             return Ok(new {message = "You applyed Discount Successfuly."});
-        } 
+        }
+        #endregion
+
+        #region Get Best Sellers
+        [HttpGet("best-seller")]
+        public async Task<IActionResult> GetBestSeller(int size = 10)
+        {
+            // Get user =========================================
+            var user = await userManager.GetUserAsync(User);
+            // ==================================================
+
+            // Get Store ========================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsDeleted == false && e.IsActive == true);
+            if (store == null)
+            {
+                return BadRequest(new {message = "This store is not exist!"});
+            }
+            // ==================================================
+
+            // Get product ======================================
+            var product = (await ProductRepo.GetAsync(e=>e.StoreId == store.Id && e.IsDeleted == false && e.IsActive == true, includes:[equals=>equals.OrderItems])).ToList()
+                .Select(p => new
+                {
+                    Product = p,
+                    // ✅ Total Quantity من كل الـ OrderItems
+                    TotalSales = p.OrderItems.Sum(oi => (int?)oi.Quantity) ?? 0,
+                    // ✅ Total Revenue = Quantity × Price لكل OrderItem
+                    TotalRevenue = p.OrderItems.Sum(oi => (decimal?)(oi.Quantity * oi.Price)) ?? 0
+                })
+                .Where(x => x.TotalSales > 0) // فقط المنتجات اللي اتباعت
+                .OrderByDescending(x => x.TotalSales) // ترتيب بعدد القطع المباعة
+                .Take(size)
+                .Select(e => new ProductResponse
+                {
+                Id          = e.Product.Id,
+                Name        = e.Product.Name,
+                StoreId     = e.Product.StoreId,
+                CategoryId  = e.Product.CategoryId,
+                Description = e.Product.Description,
+                Price       = e.Product.Price,
+                Stock       = e.Product.Stock,
+                ImageUrl    = e.Product.ImageUrl,
+                IsActive    = e.Product.IsActive,
+                CreatedAt   = e.Product.CreatedAt
+                });
+            if (product == null)
+                return NoContent();
+            // ==================================================
+
+            return Ok(product);
+        }
+        #endregion
+
+        #region Get out of stock
+        [HttpGet("out-of-stock")]
+        public async Task<IActionResult> GetOutOFStock(int minimum = 0, int page = 1, int pageSize = 20)
+        {
+            // get user ===============================================
+            var user = await userManager.GetUserAsync(User);
+            // ========================================================
+
+            // get store ==============================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive);
+            if (store == null)
+            {
+                return NotFound(new {message = "this store is not exist"});
+            }
+
+            // ========================================================
+
+            // get products ===========================================
+            var products = (await ProductRepo.GetAsync(e=>e.Stock <= minimum && !e.IsDeleted && e.IsActive))
+                .Skip((page - 1)*20)
+                .Take(pageSize)
+                .Select(e=>new ProductResponse
+                {
+                    Id          = e.Id,
+                    Name        = e.Name,
+                    StoreId     = e.StoreId,
+                    CategoryId  = e.CategoryId,
+                    Description = e.Description,
+                    Price       = e.Price,
+                    Stock       = e.Stock,
+                    ImageUrl    = e.ImageUrl,
+                    IsActive    = e.IsActive,
+                    CreatedAt   = e.CreatedAt
+                });
+            // ========================================================
+
+            return Ok(products);
+        }
+        #endregion
+
+        #region Get low stock
+        [HttpGet("low-stock")]
+        public async Task<IActionResult> GetLowStock(int minimum = 10, int page = 1, int pageSize = 10)
+        {
+            // get user ===============================================
+            var user = await userManager.GetUserAsync(User);
+            // ========================================================
+
+            // get store ==============================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive);
+            if (store == null)
+            {
+                return NotFound(new {message = "this store is not exist!"});
+            }
+
+            // ========================================================
+
+            // get products ===========================================
+            var products = (await ProductRepo.GetAsync(e=>e.Stock <= minimum && !e.IsDeleted && e.IsActive))
+                .Skip((page - 1)*20)
+                .Take(pageSize)
+                .Select(e=>new ProductResponse
+                {
+                    Id          = e.Id,
+                    Name        = e.Name,
+                    StoreId     = e.StoreId,
+                    CategoryId  = e.CategoryId,
+                    Description = e.Description,
+                    Price       = e.Price,
+                    Stock       = e.Stock,
+                    ImageUrl    = e.ImageUrl,
+                    IsActive    = e.IsActive,
+                    CreatedAt   = e.CreatedAt
+                });
+            // ========================================================
+
+            return Ok(products);
+        }
+        #endregion
+
+        #region Get Product Review
+        [HttpGet("review/{id}")]
+        public async Task<IActionResult> GetReview(Guid id, int page = 1 , int pageSize = 10)
+        {
+            // Get user =========================================
+            var user = await userManager.GetUserAsync(User);
+            // ==================================================
+
+            // Get store ========================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && e.IsActive && !e.IsDeleted);
+            if (store == null)
+            {
+                return NotFound(new {message = "this store is not exist!"});
+            }
+            // ==================================================
+
+            // Get All Reveiw ===================================
+            var reviews = (await ReviewRepo.GetAsync(e=>e.ProductId == id))
+                .Skip((page - 1)*pageSize)
+                .Take(pageSize)
+                .Select(e=>new ReviewResponse
+                {
+                    Id          = e.Id,
+                    CustomerId  = e.CustomerId,
+                    Rating      = e.Rating,
+                    Comment     = e.Comment,
+                    CreatedAt   = e.CreatedAt
+                    
+                }); 
+            // ==================================================
+            return Ok(reviews);
+        }
         #endregion
 
         #region Helper
