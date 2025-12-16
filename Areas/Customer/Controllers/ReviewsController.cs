@@ -21,7 +21,7 @@ namespace TagerCom.Areas.Customer.Controllers
         #endregion
 
         #region Ctor
-        public Reviews_RatingsController(
+        public ReviewsController(
             IRepository<Review> reviewRepository,
             UserManager<ApplicationUser> userManager,
             IRepository<Models.Store> vendorRepository,
@@ -57,10 +57,8 @@ namespace TagerCom.Areas.Customer.Controllers
 
             // prevent duplicate review
             var reviewed = await _reviewRepository.GetOneAsync(
-                r => r.CustomerId == user.Id && r.ProductId == dto.Productid,
-                includes: null,
-                tracked: false
-            );
+                r => r.CustomerId == user.Id && r.ProductId == dto.Productid
+                 );
 
             if (reviewed != null)
                 return BadRequest("You Already Reviewed This Product");

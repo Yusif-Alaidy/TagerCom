@@ -36,6 +36,8 @@ namespace TagerCom.DataAccess
         public DbSet<Wallet>            Wallets             { get; set; }
 
         public DbSet<Wishlist> Wishlist { get; set; }
+        public DbSet<TicketUpdate> TicketUpdates { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
