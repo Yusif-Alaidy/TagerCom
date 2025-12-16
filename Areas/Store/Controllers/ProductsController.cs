@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 using System.Linq;
 using TagerCom.Areas.Store.DTOs.Request;
 using TagerCom.Areas.Store.DTOs.Response;
@@ -435,7 +436,47 @@ namespace TagerCom.Areas.Store.Controllers
 
             return Ok(product);
         }
-        #endregion 
+        #endregion
+
+        #region Get out of stock
+        [HttpGet("out-of-stock")]
+        public async Task<IActionResult> GetOutOFStock(int minimum = 0, int page = 1, int pageSize = 20)
+        {
+            // get user ===============================================
+            var user = await userManager.GetUserAsync(User);
+            // ========================================================
+
+            // get store ==============================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive);
+            if (store == null)
+            {
+                return NotFound(new {message = "this store is not exist"});
+            }
+
+            // ========================================================
+
+            // get products ===========================================
+            var products = (await ProductRepo.GetAsync(e=>e.Stock <= minimum && !e.IsDeleted && e.IsActive))
+                .Skip((page - 1)*20)
+                .Take(pageSize)
+                .Select(e=>new ProductResponse
+                {
+                    Id          = e.Id,
+                    Name        = e.Name,
+                    StoreId     = e.StoreId,
+                    CategoryId  = e.CategoryId,
+                    Description = e.Description,
+                    Price       = e.Price,
+                    Stock       = e.Stock,
+                    ImageUrl    = e.ImageUrl,
+                    IsActive    = e.IsActive,
+                    CreatedAt   = e.CreatedAt
+                });
+            // ========================================================
+
+            return Ok(products);
+        }
+        #endregion
 
         #region Helper
 
