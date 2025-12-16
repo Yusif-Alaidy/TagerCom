@@ -477,6 +477,45 @@ namespace TagerCom.Areas.Store.Controllers
             return Ok(products);
         }
         #endregion
+        #region Get out of stock
+        [HttpGet("low-stock")]
+        public async Task<IActionResult> GetLowStock(int minimum = 10, int page = 1, int pageSize = 10)
+        {
+            // get user ===============================================
+            var user = await userManager.GetUserAsync(User);
+            // ========================================================
+
+            // get store ==============================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive);
+            if (store == null)
+            {
+                return NotFound(new {message = "this store is not exist"});
+            }
+
+            // ========================================================
+
+            // get products ===========================================
+            var products = (await ProductRepo.GetAsync(e=>e.Stock <= minimum && !e.IsDeleted && e.IsActive))
+                .Skip((page - 1)*20)
+                .Take(pageSize)
+                .Select(e=>new ProductResponse
+                {
+                    Id          = e.Id,
+                    Name        = e.Name,
+                    StoreId     = e.StoreId,
+                    CategoryId  = e.CategoryId,
+                    Description = e.Description,
+                    Price       = e.Price,
+                    Stock       = e.Stock,
+                    ImageUrl    = e.ImageUrl,
+                    IsActive    = e.IsActive,
+                    CreatedAt   = e.CreatedAt
+                });
+            // ========================================================
+
+            return Ok(products);
+        }
+        #endregion
 
         #region Helper
 
