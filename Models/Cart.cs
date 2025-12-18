@@ -3,7 +3,7 @@
     public class Cart
     {
         public Guid     Id          { get; set; } = Guid.NewGuid();
-        public string UserId { get; set; } = null!;
+        public string   UserId { get; set; } = null!;
         public DateTime CreatedAt   { get; set; } = DateTime.UtcNow;
 
         // Navigation
