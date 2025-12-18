@@ -12,7 +12,7 @@ namespace TagerCom.Areas.Store.Controllers
     [Route("api/store/[controller]")]
     [ApiController]
     [Authorize(Roles = "Vendor")]
-    public class StoreController : ControllerBase
+    public class ProfileController : ControllerBase
     {
         #region Fields
         public UserManager<ApplicationUser> UserManager { get; }
@@ -23,7 +23,7 @@ namespace TagerCom.Areas.Store.Controllers
         #endregion
 
         #region Constructore
-        public StoreController(UserManager<ApplicationUser> UserManager, IRepository<Models.Store> StoreRepo, IRepository<Order> OrderRepo, IRepository<Product> ProductRepo, IRepository<CartItem> CartItemRepo)
+        public ProfileController(UserManager<ApplicationUser> UserManager, IRepository<Models.Store> StoreRepo, IRepository<Order> OrderRepo, IRepository<Product> ProductRepo, IRepository<CartItem> CartItemRepo)
         {
             this.UserManager  = UserManager;
             this.StoreRepo    = StoreRepo;
@@ -38,11 +38,15 @@ namespace TagerCom.Areas.Store.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStore()
         {
-            // Get user ================================================
+            // Get user =========================================================================================================
+            // ==================================================================================================================
             var user = await UserManager.GetUserAsync(User);
-            // =========================================================
+            // ==================================================================================================================
 
-            // Get Store ===============================================
+
+            // Get Store ========================================================================================================
+            // ==================================================================================================================
+
             var store = (await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive));
             if (store is null)
             {
@@ -53,10 +57,11 @@ namespace TagerCom.Areas.Store.Controllers
                 Id              = store!.Id,
                 StoreName       = store.StoreName,
                 Rating          = store.Rating,
-                RevenueShare    = store.RevenueShare,
                 CreatedAt       = store.CreatedAt,
+                UpdatedAt       = store.UpdatedAt,
             };
-            // =========================================================
+            // ==================================================================================================================
+
             return Ok(response);
             
         }
