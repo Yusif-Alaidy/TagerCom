@@ -37,8 +37,9 @@ namespace TagerCom.DataAccess
 
         public DbSet<Wishlist> Wishlist { get; set; }
         public DbSet<TicketUpdate> TicketUpdates { get; set; }
+        public DbSet<Complaint> Complaint { get; set; }
 
-
+        
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -65,11 +66,12 @@ namespace TagerCom.DataAccess
             }
 
             builder.Entity<Ticket>()
-                .HasOne(t => t.Support)
-                .WithMany()
-                .HasForeignKey(t => t.SupportId);
+                  .HasOne(t => t.Support)
+                   .WithMany()
+                       .HasForeignKey(t => t.SupportId)
+                       .OnDelete(DeleteBehavior.Restrict); 
 
-            
+
             builder.Entity<Product>()
                 .HasIndex(e => e.StoreId);
 
@@ -289,6 +291,12 @@ namespace TagerCom.DataAccess
                 .Property(v => v.RevenueShare)
                 .HasPrecision(5, 4);
             // ============================================
+           builder.Entity<TicketUpdate>()
+                  .HasOne(tu => tu.Ticket)
+                       .WithMany(t => t.Updates)
+                          .HasForeignKey(tu => tu.TicketId)
+                             .OnDelete(DeleteBehavior.NoAction); 
+
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

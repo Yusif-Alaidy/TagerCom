@@ -19,8 +19,8 @@
 
         // (Snapshot)
         public string? OldSupportId { get; set; }
-        public string? NewSupportId { get; set; }
 
+        public List<string> Attachments { get; set; } = new();
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

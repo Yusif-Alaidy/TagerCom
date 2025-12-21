@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TagerCom.Migrations
 {
     /// <inheritdoc />
-    public partial class Init : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -280,33 +280,6 @@ namespace TagerCom.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tickets",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    SupportId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    Subject = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Tickets", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Tickets_AspNetUsers_CustomerId",
-                        column: x => x.CustomerId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Tickets_AspNetUsers_SupportId",
-                        column: x => x.SupportId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "UserAddress",
                 columns: table => new
                 {
@@ -462,6 +435,53 @@ namespace TagerCom.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Complaint",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    StoreId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Subject = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    OverdueByMinutes = table.Column<int>(type: "int", nullable: false),
+                    OverdueByText = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ResolvedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsEscalated = table.Column<bool>(type: "bit", nullable: false),
+                    EscalatedById = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    EscalatedToManagerId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UrgencyLevel = table.Column<int>(type: "int", nullable: true),
+                    EscalationDeadline = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EscalatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ManagementNotified = table.Column<bool>(type: "bit", nullable: false),
+                    ManagementNotifiedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Complaint", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Complaint_AspNetUsers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Complaint_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Complaint_Stores_StoreId",
+                        column: x => x.StoreId,
+                        principalTable: "Stores",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "OrderStatusHistory",
                 columns: table => new
                 {
@@ -469,7 +489,8 @@ namespace TagerCom.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    ChangedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    ChangedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -480,6 +501,46 @@ namespace TagerCom.Migrations
                         principalTable: "Orders",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tickets",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SupportId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    Subject = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    status = table.Column<int>(type: "int", nullable: false),
+                    priority = table.Column<int>(type: "int", nullable: false),
+                    IssueDescription = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Type = table.Column<int>(type: "int", nullable: false),
+                    ResolutionNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SatisfactionRating = table.Column<int>(type: "int", nullable: true),
+                    IsArchived = table.Column<bool>(type: "bit", nullable: false),
+                    Attachments = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tickets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tickets_AspNetUsers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Tickets_AspNetUsers_SupportId",
+                        column: x => x.SupportId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Tickets_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -626,6 +687,37 @@ namespace TagerCom.Migrations
                         principalColumn: "Id");
                 });
 
+            migrationBuilder.CreateTable(
+                name: "TicketUpdates",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TicketId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ActorId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsInternal = table.Column<bool>(type: "bit", nullable: false),
+                    OldStatus = table.Column<int>(type: "int", nullable: true),
+                    NewStatus = table.Column<int>(type: "int", nullable: true),
+                    OldSupportId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NewSupportId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketUpdates", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketUpdates_AspNetUsers_ActorId",
+                        column: x => x.ActorId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TicketUpdates_Tickets_TicketId",
+                        column: x => x.TicketId,
+                        principalTable: "Tickets",
+                        principalColumn: "Id");
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -685,6 +777,21 @@ namespace TagerCom.Migrations
                 name: "IX_Categories_ParentId",
                 table: "Categories",
                 column: "ParentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Complaint_CustomerId",
+                table: "Complaint",
+                column: "CustomerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Complaint_OrderId",
+                table: "Complaint",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Complaint_StoreId",
+                table: "Complaint",
+                column: "StoreId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId",
@@ -775,9 +882,24 @@ namespace TagerCom.Migrations
                 column: "CustomerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tickets_OrderId",
+                table: "Tickets",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Tickets_SupportId",
                 table: "Tickets",
                 column: "SupportId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketUpdates_ActorId",
+                table: "TicketUpdates",
+                column: "ActorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketUpdates_TicketId",
+                table: "TicketUpdates",
+                column: "TicketId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_WalletId",
@@ -832,6 +954,9 @@ namespace TagerCom.Migrations
                 name: "CartItems");
 
             migrationBuilder.DropTable(
+                name: "Complaint");
+
+            migrationBuilder.DropTable(
                 name: "Notifications");
 
             migrationBuilder.DropTable(
@@ -850,7 +975,7 @@ namespace TagerCom.Migrations
                 name: "Reviews");
 
             migrationBuilder.DropTable(
-                name: "Tickets");
+                name: "TicketUpdates");
 
             migrationBuilder.DropTable(
                 name: "UserAddress");
@@ -868,16 +993,19 @@ namespace TagerCom.Migrations
                 name: "Carts");
 
             migrationBuilder.DropTable(
-                name: "Orders");
+                name: "Transactions");
 
             migrationBuilder.DropTable(
-                name: "Transactions");
+                name: "Tickets");
 
             migrationBuilder.DropTable(
                 name: "Products");
 
             migrationBuilder.DropTable(
                 name: "Wallets");
+
+            migrationBuilder.DropTable(
+                name: "Orders");
 
             migrationBuilder.DropTable(
                 name: "Brands");

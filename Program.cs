@@ -1,5 +1,7 @@
 using System;
+using System.Text.Json.Serialization;
 using TagerCom.Services;
+using System.Text.Json.Serialization;
 
 namespace TagerCom
 {
@@ -53,6 +55,7 @@ namespace TagerCom
             builder.Services.AddTransient<IEmailSender, EmailSender>();
             builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository pattern
             builder.Services.AddScoped<IUserRepository, UserRepository>(); // User repository 
+            builder.Services.AddMemoryCache();
 
 
             // Add Swagger UI support
@@ -66,6 +69,14 @@ namespace TagerCom
                     Description = "API documentation for TagerCom project"
                 });
             });
+
+
+            builder.Services
+                .AddControllers()
+                .AddJsonOptions(o =>
+                {
+                    o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             var app = builder.Build();
             // --------------------------------------------------------
