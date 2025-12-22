@@ -240,6 +240,55 @@ namespace TagerCom.Areas.Store.Controllers
         }
         #endregion
 
+        #region Change status
+        [HttpPatch("cancel/{id}")]
+        public async Task<IActionResult> CancelOrder(Guid id)
+        {
+            // Get user ==========================================================
+            // ===================================================================
+            var user = await UserManager.GetUserAsync(User);
+            // ===================================================================
+
+            // Get store =========================================================
+            // ===================================================================
+            var store = await StoreRepo.GetOneAsync(e=>e.ApplicationUserId == user!.Id && !e.IsDeleted && e.IsActive);
+            if (store == null)
+            {
+                return NotFound(new { message = "This store is not exist!" });
+            }
+            // ===================================================================
+
+            // Get Order =========================================================
+            // ===================================================================
+            var order = await OrderRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store.Id);
+            if (order == null)
+                return NotFound(new { message = "This order is not founded!" });
+
+
+            var orderStatus = order.OrderStatus == OrderStatus.Confirmed ||
+                order.OrderStatus == OrderStatus.Pending                 ||
+                order.OrderStatus == OrderStatus.AwaitingPayment         ||
+                order.OrderStatus == OrderStatus.Confirmed               ||
+                order.OrderStatus == OrderStatus.Processing              ||
+                order.OrderStatus == OrderStatus.ReadyToShip 
+                ? false : true;
+
+            if (orderStatus)
+            {
+                return BadRequest(new { message = "This Order is can't confirm" });
+            }
+            // ===================================================================
+
+            // Change Status  ====================================================
+            // ===================================================================
+            order.OrderStatus = OrderStatus.Cancelled;
+            await OrderRepo.CommitAsync();
+            // ===================================================================
+
+            return Ok(new { message = $"Order is Canceled successfuly. " });
+        }
+        #endregion
+
 
     }
 }
