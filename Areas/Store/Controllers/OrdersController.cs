@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using TagerCom.Areas.Customer.DTOs.Response;
 using TagerCom.Areas.Store.DTOs.Request;
@@ -24,15 +25,29 @@ namespace TagerCom.Areas.Store.Controllers
         public IRepository<Models.Store> StoreRepo { get; }
         public IRepository<Order> OrderRepo { get; }
         public IEmailSender EmailSender { get; }
+        public IRepository<Product> ProductRepo { get; }
+        public ApplicationDbContext Context { get; }
+        public ILogger<OrdersController> Logger { get; }
         #endregion
 
         #region Constructor
-        public OrdersController(UserManager<ApplicationUser> UserManager, IRepository<Models.Store> StoreRepo, IRepository<Order> OrderRepo, IEmailSender EmailSender)
+        public OrdersController(
+            UserManager<ApplicationUser> UserManager,
+            IRepository<Models.Store> StoreRepo,
+            IRepository<Order> OrderRepo,
+            IEmailSender EmailSender,
+            IRepository<Product> ProductRepo,
+            ApplicationDbContext context,
+            ILogger<OrdersController> logger
+            )
         {
             this.UserManager = UserManager;
             this.StoreRepo = StoreRepo;
             this.OrderRepo = OrderRepo;
             this.EmailSender = EmailSender;
+            this.ProductRepo = ProductRepo;
+            this.Context = context;
+            this.Logger = logger;
         }
         #endregion
 
@@ -111,7 +126,7 @@ namespace TagerCom.Areas.Store.Controllers
         }
         #endregion
 
-        #region Get one
+        #region Get One
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOne(Guid id)
         {
@@ -150,7 +165,7 @@ namespace TagerCom.Areas.Store.Controllers
 
         #region Confirm Order
         [HttpPatch("confirm/{id}")]
-        public async Task<IActionResult> ConfirmOrder(Guid id)
+        public async Task<IActionResult> ConfirmOrder([FromRoute]Guid id)
         {
             // Get user ========================================================
             // =================================================================
@@ -166,31 +181,73 @@ namespace TagerCom.Areas.Store.Controllers
 
             // Get order =======================================================
             // =================================================================
-            var order = await OrderRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store.Id);
+
+            var order = await OrderRepo.Query()
+                .Where(e => e.Id == id && e.StoreId == store.Id)
+                .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product) // ✅ Include Product
+                .Include(o => o.Customer) // ✅ Include Customer
+                .FirstOrDefaultAsync();
             if (order == null)
                 return NotFound(new {message = "This order is not founded!"});
         
             var orderStatus = order.OrderStatus == OrderStatus.Pending || order.OrderStatus == OrderStatus.AwaitingPayment? true : false;
-            if (orderStatus)
+            if (!orderStatus)
             {
                 return BadRequest(new {message = "This Order is can't confirm"});
             }
             // =================================================================
+            using var transaction = await Context.Database.BeginTransactionAsync();
+            try
+            {
+                // Get change status ===============================================
+                // =================================================================
+                order.OrderStatus = OrderStatus.Confirmed;
+                await OrderRepo.CommitAsync();
+                // =================================================================
 
-            // Get change status ===============================================
-            // =================================================================
-            order.OrderStatus = OrderStatus.Confirmed;
-            await OrderRepo.CommitAsync();
-            // =================================================================
+                // Change product Qauntity =========================================
+                // =================================================================
+                var orderItem = order.OrderItems;
+                foreach (var item in orderItem)
+                {
+                    var product = await ProductRepo.GetOneAsync(p => p.Id == item.Product.Id);
 
-            // Get send email ==================================================
-            // =================================================================
-            //var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-            //var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-            await EmailSender.SendEmailAsync(order.Customer.Email!, "Your Order Is Confirmed 🎉", $"Thank you for shopping with us!\r\nYour order is confirmed and is now being prepared for shipment.\r\nYou’ll receive an update as soon as it’s on the way.");
-            // =================================================================
+                    if (product == null)
+                    {
+                        return NotFound(new { message = $"Product {item.ProductId} not found" });
+                    }
 
-            return Ok(new {message = "Order Confirm successfuly. "});
+                    // ✅ Check stock availability
+                    if (product.Stock < item.Quantity)
+                    {
+                        return BadRequest(new
+                        {
+                            message = $"Insufficient stock for {product.Name}. Available: {product.Stock}, Requested: {item.Quantity}"
+                        });
+                    }
+
+                    product.Stock -= item.Quantity;
+                    ProductRepo.Update(product);
+                }
+                // ✅ Commit مرة واحدة بعد اللووب
+                await ProductRepo.CommitAsync();
+                // =================================================================
+
+                // Get send email ==================================================
+                // =================================================================
+                await transaction.CommitAsync();
+                await EmailSender.SendEmailAsync(order.Customer.Email!, "Your Order Is Confirmed 🎉", $"Thank you for shopping with us!\r\nYour order is confirmed and is now being prepared for shipment.\r\nYou’ll receive an update as soon as it’s on the way.");
+                // =================================================================
+
+                return Ok(new {message = "Order Confirm successfuly. "});
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Logger.LogError(ex, "Error confirming order {OrderId}", id);
+                return StatusCode(500, new { message = "Failed to confirm order" });
+            }
         }
         #endregion
 
