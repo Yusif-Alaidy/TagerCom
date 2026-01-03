@@ -297,8 +297,8 @@ namespace TagerCom.Areas.Store.Controllers
         }
         #endregion
 
-        #region Change status
-        [HttpPatch("cancel/{id}")]
+        #region Cancel
+        [HttpDelete("cancel/{id}")]
         public async Task<IActionResult> CancelOrder(Guid id)
         {
             // Get user ==========================================================
@@ -317,7 +317,13 @@ namespace TagerCom.Areas.Store.Controllers
 
             // Get Order =========================================================
             // ===================================================================
-            var order = await OrderRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store.Id);
+            //var order = await OrderRepo.GetOneAsync(e=>e.Id == id && e.StoreId == store.Id);
+            var order = await OrderRepo.Query()
+                .Where(e => e.Id == id && e.StoreId == store.Id)
+                .Include(e=>e.OrderItems)
+                .ThenInclude(e=>e.Product)
+                .FirstOrDefaultAsync();
+
             if (order == null)
                 return NotFound(new { message = "This order is not founded!" });
 
@@ -336,13 +342,36 @@ namespace TagerCom.Areas.Store.Controllers
             }
             // ===================================================================
 
-            // Change Status  ====================================================
-            // ===================================================================
-            order.OrderStatus = OrderStatus.Cancelled;
-            await OrderRepo.CommitAsync();
-            // ===================================================================
+            using var transaction = await Context.Database.BeginTransactionAsync();
+            try
+            {
 
-            return Ok(new { message = $"Order is Canceled successfuly. " });
+                // Change Status  ====================================================
+                // ===================================================================
+                order.OrderStatus = OrderStatus.Cancelled;
+                await OrderRepo.CommitAsync();
+                // ===================================================================
+
+                // Return product quantity ===========================================
+                // ===================================================================
+                var orderItems = order.OrderItems;
+                foreach (var o in orderItems)
+                {
+                    o.Product.Stock += o.Quantity;
+                    await OrderRepo.CommitAsync();
+                }
+                // ===================================================================
+
+
+                await transaction.CommitAsync();
+                return Ok(new { message = $"Order is Canceled successfuly. " });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Logger.LogError(ex, "Error confirming order {OrderId}", id);
+                return StatusCode(500, new { message = "Failed to confirm order" });
+            }
         }
         #endregion
 
