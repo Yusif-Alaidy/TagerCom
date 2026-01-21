@@ -168,7 +168,8 @@ namespace TagerCom.DataAccess
                 .HasOne(v => v.ApplicationUser)
                 .WithOne(u => u.Store)
                 .HasForeignKey<Store>(v => v.ApplicationUserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
 
 
             // ============================================
