@@ -13,7 +13,7 @@ namespace TagerCom.Models
     {
 
         public Guid     Id                      { get; set; } = Guid.NewGuid();
-        public string?  ApplicationUserId       { get; set; } = string.Empty;
+        public string?  ApplicationUserId       { get; set; } 
         public string   StoreName               { get; set; } = null!;
         public decimal  Rating                  { get; set; } = 0m;
         public int      RevenueShare            { get; set; } = 15; // Vendor's revenue share percentage (0.15 = 15%)

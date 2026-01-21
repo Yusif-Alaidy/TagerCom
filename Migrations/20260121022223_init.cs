@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TagerCom.Migrations
 {
     /// <inheritdoc />
-    public partial class IntialCreation : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -414,7 +414,10 @@ namespace TagerCom.Migrations
                     ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    DiscountValueFixed = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    DiscountStartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DiscountEndDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
