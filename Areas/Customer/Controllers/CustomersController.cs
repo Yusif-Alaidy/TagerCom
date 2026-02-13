@@ -1,4 +1,4 @@
-using Azure.Core;
+//using Azure.Core;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -11,15 +11,18 @@ namespace TagerCom.Areas.Customer.Controllers
 {
     [Route("api/Customer/[controller]")]
     [ApiController]
+    [Area("Customer")]
+
     public class CustomersController : ControllerBase
     {
-
+        #region Fields
         private readonly IRepository<Favorite> _favoriteRepository;
         private readonly IRepository<Product> _productRepo;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IRepository<Wishlist> _wishlistRepository;
+        #endregion
 
-
+        #region Constructor
         public CustomersController(IRepository<Favorite> favoriteRepo,
             IRepository<Product> productRepo, UserManager<ApplicationUser> userManager, IRepository<Wishlist> wishlistRepository)
         {
@@ -29,8 +32,9 @@ namespace TagerCom.Areas.Customer.Controllers
             _wishlistRepository=wishlistRepository;
 
         }
+        #endregion
 
-
+        #region Get My Favorites
         [Authorize(Roles = "Customer")]
         [HttpGet("GetMyFavorites")]
         public async Task <IActionResult>GetMyFavorites()
@@ -52,8 +56,6 @@ namespace TagerCom.Areas.Customer.Controllers
 
                 }).ToList();
             return Ok(favorites);
-
-
 
 
             // Using GetOneAsync
@@ -81,7 +83,9 @@ namespace TagerCom.Areas.Customer.Controllers
 
             //})
         }
+        #endregion
 
+        #region Add Favorite
         [Authorize(Roles = "Customer")]
         [HttpPost("AddToFavorites")]
         public async Task<IActionResult> AddToFavorites([FromBody] AddFavoriteRequestDTO addFavorite)
@@ -120,7 +124,9 @@ namespace TagerCom.Areas.Customer.Controllers
 
             return Ok(new { message = "Product added to Your favorites successfully." });
         }
+        #endregion
 
+        #region Remove From Favorites
         [Authorize(Roles = "Customer")]
         [HttpDelete("RemoveFromFavorites/{productId}")]
         public async Task<IActionResult> RemoveFromFavorites(Guid productId)
@@ -139,9 +145,7 @@ namespace TagerCom.Areas.Customer.Controllers
             return Ok(new { message = "Product removed from favorites successfully." });
         }
 
-
-       
-
+        #endregion
 
     }
 }
