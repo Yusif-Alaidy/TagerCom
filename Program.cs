@@ -67,7 +67,18 @@ namespace TagerCom
                 });
             });
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
             var app = builder.Build();
+            app.UseCors("AllowAll");
             // --------------------------------------------------------
             // DbInitializer
             using (var scope = app.Services.CreateScope())
@@ -78,17 +89,17 @@ namespace TagerCom
             // --------------------------------------------------------
             // Configure the HTTP request pipeline.
             //if (app.Environment.IsDevelopment())
-           // {
-                // This generates openapi.json
-                app.MapOpenApi();
+            // {
+            // This generates openapi.json
+            app.MapOpenApi();
 
-                //  Enable Swagger UI
-                app.UseSwagger();
-                app.UseSwaggerUI(options =>
-                {
-                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "TagerCom API v1");
-                    options.RoutePrefix = "swagger"; // open at /swagger
-                });
+            //  Enable Swagger UI
+            app.UseSwagger();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "TagerCom API v1");
+                options.RoutePrefix = "swagger"; // open at /swagger
+            });
             //}
 
             app.UseHttpsRedirection();

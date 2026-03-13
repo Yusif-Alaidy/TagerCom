@@ -12,15 +12,15 @@ using TagerCom.DataAccess;
 namespace TagerCom.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260212180512_init1")]
-    partial class init1
+    [Migration("20260301194847_google")]
+    partial class google
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.10")
+                .HasAnnotation("ProductVersion", "9.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -202,6 +202,9 @@ namespace TagerCom.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("FirstName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GoogleId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LastName")

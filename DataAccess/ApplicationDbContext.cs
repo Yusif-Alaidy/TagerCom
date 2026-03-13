@@ -13,7 +13,7 @@ namespace TagerCom.DataAccess
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-    : base(options)
+        : base(options)
         { }
 
         public DbSet<Brand>             Brands              { get; set; }

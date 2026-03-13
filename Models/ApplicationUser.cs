@@ -10,6 +10,7 @@ namespace TagerCom.Models
         public string?  LastName            { get; set; } = string.Empty;
         public string?  PhoneNumbers        { get; set; } = string.Empty;
         public string?  SecondPhoneNumber   { get; set; } = string.Empty;
+        public string? GoogleId { get; set; }
 
         // Navigation
         public ICollection<UserAddress> userAddresses   { get; set; } = new List<UserAddress>();
