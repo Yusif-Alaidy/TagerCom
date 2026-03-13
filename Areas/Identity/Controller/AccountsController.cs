@@ -1,4 +1,5 @@
 ﻿using Azure.Core;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
@@ -27,12 +28,14 @@ namespace TagerCom.Area.Identity.Controller
         private readonly ApplicationDbContext context;
         private readonly TokenService tokenService;
         private readonly IRepository<RefreshToken> refreshToken;
+        private readonly IConfiguration _config;
 
         #endregion
 
         #region Constructore
-        public AccountsController(ApplicationDbContext _context ,TokenService tokenService,IRepository<RefreshToken> refreshToken, UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
+        public AccountsController(IConfiguration config, ApplicationDbContext _context, TokenService tokenService, IRepository<RefreshToken> refreshToken, UserManager<ApplicationUser> userManager, IEmailSender emailSender, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, IRepository<UserOTP> userOTP)
         {
+            _config = config;
             this.signInManager = signInManager;
             this.configuration = configuration;
             this.emailSender = emailSender;
@@ -72,11 +75,11 @@ namespace TagerCom.Area.Identity.Controller
             return Ok(new { SuccMsg = "User created successfully. Please confirm your email." });
         }
         #endregion
-        
+
         #region ConfirmEmail
         //Confirm user email using token
         [HttpGet("ConfirmEmail")]
-        public async Task<IActionResult> ConfirmEmail([FromQuery]string userId, [FromQuery]string token)
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
         {
             var user = await userManager.FindByIdAsync(userId);
             if (user == null)
@@ -89,7 +92,7 @@ namespace TagerCom.Area.Identity.Controller
 
             return Ok(new { msg = "Email confirmed successfully." });
         }
-    
+
         #endregion
 
         #region Login
@@ -100,7 +103,7 @@ namespace TagerCom.Area.Identity.Controller
                        ?? await userManager.FindByNameAsync(model.EmailOrUserName);
             if (user == null || !await userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new { msg = "Invalid username or password" });
-            if (!user.EmailConfirmed) return BadRequest(new {msg = "Please Confirem Your Email"});
+            if (!user.EmailConfirmed) return BadRequest(new { msg = "Please Confirem Your Email" });
 
             //var oldTokens = await refreshToken.GetAsync(e=>e.UserId == user.Id);
             var oldToken = context.RefreshTokens.Where(e => e.UserId == user.Id);
@@ -108,7 +111,7 @@ namespace TagerCom.Area.Identity.Controller
             context.SaveChanges();
 
             var roles = await userManager.GetRolesAsync(user);
-            
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
@@ -133,7 +136,7 @@ namespace TagerCom.Area.Identity.Controller
             var accessToken = tokenService.GenerateAccessToken(claims);
 
             var accessTokenExpiration = DateTime.UtcNow.AddMinutes(15);
-            
+
             return Ok(new
             {
                 accessToken,
@@ -168,7 +171,7 @@ namespace TagerCom.Area.Identity.Controller
             // TokenService
             var newAccessToken = tokenService.GenerateAccessToken(claims);
 
-            return Ok(new { AccessToken = newAccessToken});
+            return Ok(new { AccessToken = newAccessToken });
         }
         #endregion
 
@@ -196,6 +199,84 @@ namespace TagerCom.Area.Identity.Controller
         }
         #endregion
 
+        #region Google-auth
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            var payload = await VerifyGoogleToken(request.IdToken);
+            if (payload == null)
+                return Unauthorized("Invalid Google Token");
+
+            var user = await userManager.FindByEmailAsync(payload.Email);
+
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    Email = payload.Email,
+                    UserName = payload.Email, // ← مهم جداً مع Identity
+                    FirstName = payload.Name,
+                    GoogleId = payload.Subject,
+                    ProfileImgUrl = payload.Picture,
+                    EmailConfirmed = true           // ← عشان ميطلبش تأكيد
+                };
+
+                var result = await userManager.CreateAsync(user);
+
+                if (!result.Succeeded)
+                    return BadRequest(result.Errors);
+            }
+
+            var jwtToken = GenerateJwtToken(user);
+
+            return Ok(new
+            {
+                Token = jwtToken,
+                User = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.ProfileImgUrl
+                }
+            });
+        }
+        private async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleToken(string idToken)
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { _config["Google:ClientId"] }
+            };
+
+            return await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+        }
+
+        private string GenerateJwtToken(ApplicationUser user)
+        {
+            var claims = new[]
+            {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Email, user.Email!),
+        new Claim(ClaimTypes.Name, user.FirstName ?? "")
+    };
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_config["JWT:key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _config["JWT:issuer"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(7),
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+
+
+        #endregion
 
         #region ForgetPassword
         //Send OTP for password reset
@@ -234,7 +315,7 @@ namespace TagerCom.Area.Identity.Controller
             // ---------------------------------------------------------------------------------------------------------------------------------
 
             var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/ResetPassword";
-            return Ok(new { msg = "OTP sent to your email successfully", userId = user.Id, NextStep = link});
+            return Ok(new { msg = "OTP sent to your email successfully", userId = user.Id, NextStep = link });
         }
         #endregion
 
@@ -244,7 +325,7 @@ namespace TagerCom.Area.Identity.Controller
         {
             // ### Get OTP and Check in it -------------------------------------------------------------------- 
             //var OTP = context.UserOTPs.FirstOrDefault(e => e.OTPNumber ==  resetPasswordDTO.OTPNumber);
-            var OTP = await userOTP.GetOneAsync(e=> e.OTPNumber == resetPasswordDTO.OTPNumber);
+            var OTP = await userOTP.GetOneAsync(e => e.OTPNumber == resetPasswordDTO.OTPNumber);
             if (OTP == null) return BadRequest(new { msg = "Invalid OTP" });
             // ------------------------------------------------------------------------------------------------
 
@@ -262,7 +343,7 @@ namespace TagerCom.Area.Identity.Controller
             //        .FirstOrDefault();
 
             // ### Check is this OTP Valid Or Not ------------------------------------------------
-            if(OTP.IsUsed == true) return BadRequest(new { msg = "This OTP Is Already Used" });
+            if (OTP.IsUsed == true) return BadRequest(new { msg = "This OTP Is Already Used" });
             if (DateTime.UtcNow > OTP.ValidTo)
                 return BadRequest(new { msg = "Expired OTP" });
             OTP.IsUsed = true;
@@ -271,7 +352,7 @@ namespace TagerCom.Area.Identity.Controller
             // -----------------------------------------------------------------------------------
 
             var link = $"{Request.Scheme}://{Request.Host}/api/Identity/Accounts/NewPassword";
-            return Ok(new { msg = "OTP verified successfully", userId = user.Id , NextStep = link});
+            return Ok(new { msg = "OTP verified successfully", userId = user.Id, NextStep = link });
         }
 
 
@@ -283,7 +364,7 @@ namespace TagerCom.Area.Identity.Controller
         {
             // ## Get OTP Depended UserId and check for it --------------------------------------------------------------
             //var OTP = context.UserOTPs.FirstOrDefault(e=> e.ApplicationUserId == newPasswordDTO.ApplicationUserId);
-            var OTP = await userOTP.GetOneAsync(e=> e.ApplicationUserId == newPasswordDTO.ApplicationUserId);
+            var OTP = await userOTP.GetOneAsync(e => e.ApplicationUserId == newPasswordDTO.ApplicationUserId);
             if (OTP is null) return BadRequest(new { msg = "This User Name need a new OTP Go reset password please" });
             if (OTP.IsUsed == false) return BadRequest(new { msg = "Please Use Your OTP in reset Password" });
             // ----------------------------------------------------------------------------------------------------------
@@ -304,7 +385,7 @@ namespace TagerCom.Area.Identity.Controller
         }
         #endregion
 
-        
+
 
     }
 }
